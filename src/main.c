@@ -152,6 +152,19 @@ static void prvSetupHardware(void)
     /* Configure UART0 to send messages to terminal. */
     prvConfigureUART();
 
+    //GPIOPinTypeGPIOInput(GPIO_PORTM_BASE, GPIO_PIN_3);
+    //GPIOPinTypeGPIOInput(GPIO_PORTH_BASE, GPIO_PIN_2);
+    //GPIOPinTypeGPIOInput(GPIO_PORTN_BASE, GPIO_PIN_2);
+
+    MAP_GPIODirModeSet(GPIO_PORTM_BASE, GPIO_PIN_3, GPIO_DIR_MODE_IN);
+    MAP_GPIOPadConfigSet(GPIO_PORTM_BASE, GPIO_PIN_3, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+
+    MAP_GPIODirModeSet(GPIO_PORTH_BASE, GPIO_PIN_2, GPIO_DIR_MODE_IN);
+    MAP_GPIOPadConfigSet(GPIO_PORTH_BASE, GPIO_PIN_2, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+
+    MAP_GPIODirModeSet(GPIO_PORTN_BASE, GPIO_PIN_2, GPIO_DIR_MODE_IN);
+    MAP_GPIOPadConfigSet(GPIO_PORTN_BASE, GPIO_PIN_2, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+
     /* Set-up interrupts for hall sensors */
     prvConfigureHallInts();
 

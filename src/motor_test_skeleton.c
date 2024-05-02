@@ -113,13 +113,10 @@ void vCreateMotorTask( void )
 static void prvMotorTask( void *pvParameters )
 {
     uint16_t duty_value = 5;
-    uint16_t period_value = 100;
+    uint16_t period_value = 50;
     int32_t Hall_A;
-    bool Hall_A_Value;
     int32_t Hall_B;
-    bool Hall_B_Value;
     int32_t Hall_C;
-    bool Hall_C_Value;
 
     bool success = false;
 
@@ -130,28 +127,23 @@ static void prvMotorTask( void *pvParameters )
 
     UARTprintf("\n Success: %d", success);
     /* Kick start the motor */
-    
+
+    //1. Read hall effect sensors
     // Do an initial read of the hall effect sensor GPIO lines
-    Hall_A = GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3);
-    // Shift right by the pin number to get the logical value (0 or 1)
-    Hall_A_Value = (Hall_A >> 3) & 0x01;
-    // Now print this value
-    UARTprintf("\nHall A: %d", Hall_A_Value);
+    Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
 
-    Hall_B = GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2);
-    // Shift right by the pin number to get the logical value (0 or 1)
-    Hall_B_Value = (Hall_B >> 2) & 0x01;
-    // Now print this value
-    UARTprintf("\nHall B: %d", Hall_B_Value);
+    UARTprintf("\nHall A: %d", Hall_A);
 
-    Hall_C = GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2);
-    // Shift right by the pin number to get the logical value (0 or 1)
-    Hall_C_Value = (Hall_C >> 2) & 0x01;
-    // Now print this value
-    UARTprintf("\nHall C: %d", Hall_C_Value);
+    Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
+
+    UARTprintf("\nHall B: %d", Hall_B);
+
+    Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
+
+    UARTprintf("\nHall C: %d", Hall_C);
 
     // give the read hall effect sensor lines to updateMotor() to move the motor
-    updateMotor(Hall_A_Value, Hall_B_Value, Hall_C_Value);
+    updateMotor(Hall_A, Hall_B, Hall_C);
 
     // one single phase
     // Recommendation is to use an interrupt on the hall effect sensors GPIO lines 
@@ -182,25 +174,20 @@ static void prvMotorTask( void *pvParameters )
 void HallSensorHandler(void)
 {
     int32_t Hall_A;
-    bool Hall_A_Value;
     int32_t Hall_B;
-    bool Hall_B_Value;
     int32_t Hall_C;
-    bool Hall_C_Value;
-    UARTprintf("\nINT");
+
     //1. Read hall effect sensors
-    Hall_A = GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3);
+    Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
     // Shift right by the pin number to get the logical value (0 or 1)
-    Hall_A_Value = (Hall_A >> 3) & 0x01; // Bit Shift To Get Bool
 
-    Hall_B = GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2);
-    Hall_B_Value = (Hall_B >> 2) & 0x01; // Bit Shift To Get Bool
+    Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
-    Hall_C = GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2);
-    Hall_C_Value = (Hall_C >> 2) & 0x01; // Bit Shift To Get Bool
+
+    Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
     //2. call update motor to change to next phase
-    updateMotor(Hall_A_Value, Hall_B_Value, Hall_C_Value);
+    updateMotor(Hall_A, Hall_B, Hall_C);
     
     //3. Clear interrupt
     GPIOIntClear(GPIO_PORTM_BASE, GPIO_PIN_3);
