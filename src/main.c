@@ -78,6 +78,7 @@
 /* The system clock frequency. */
 uint32_t g_ui32SysClock;
 
+// Test
 /* Set up the hardware ready to run this demo. */
 static void prvSetupHardware( void );
 
