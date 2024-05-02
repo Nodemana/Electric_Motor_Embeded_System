@@ -176,13 +176,25 @@ void vApplicationMallocFailedHook( void )
 /*-----------------------------------------------------------*/
 static void prvConfigureHallInts( void )
 {
+    GPIOIntTypeSet(GPIO_PORTM_BASE, GPIO_PIN_3, GPIO_BOTH_EDGES);
+    GPIOIntTypeSet(GPIO_PORTH_BASE, GPIO_PIN_2, GPIO_BOTH_EDGES);
+    GPIOIntTypeSet(GPIO_PORTN_BASE, GPIO_PIN_2, GPIO_BOTH_EDGES);
 
     /* Configure GPIO ports to trigger an interrupt on rising/falling or both edges. */
+    GPIOIntEnable(GPIO_PORTM_BASE, GPIO_PIN_3);
+    GPIOIntEnable(GPIO_PORTH_BASE, GPIO_PIN_2);
+    GPIOIntEnable(GPIO_PORTN_BASE, GPIO_PIN_2);
 
+    
     /* Enable the interrupt for LaunchPad GPIO Port in the GPIO peripheral. */
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOM);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOH);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
 
     /* Enable the Ports interrupt in the NVIC. */
-
+    IntEnable(INT_GPIOM);
+    IntEnable(INT_GPIOH);
+    IntEnable(INT_GPION);
     /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
 }

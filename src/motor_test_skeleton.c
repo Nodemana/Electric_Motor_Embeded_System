@@ -113,22 +113,52 @@ void vCreateMotorTask( void )
 static void prvMotorTask( void *pvParameters )
 {
     uint16_t duty_value = 5;
-    uint16_t period_value = 50;
+    uint16_t period_value = 100;
+    int32_t Hall_A;
+    bool Hall_A_Value;
+    int32_t Hall_B;
+    bool Hall_B_Value;
+    int32_t Hall_C;
+    bool Hall_C_Value;
+
+    bool success = false;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
-    initMotorLib(period_value);
+    success = initMotorLib(period_value);
     /* Set at >10% to get it to start */
     setDuty(duty_value);
 
+    UARTprintf("\n Success: %d", success);
     /* Kick start the motor */
+    
     // Do an initial read of the hall effect sensor GPIO lines
+    Hall_A = GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3);
+    // Shift right by the pin number to get the logical value (0 or 1)
+    Hall_A_Value = (Hall_A >> 3) & 0x01;
+    // Now print this value
+    UARTprintf("\nHall A: %d", Hall_A_Value);
+
+    Hall_B = GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2);
+    // Shift right by the pin number to get the logical value (0 or 1)
+    Hall_B_Value = (Hall_B >> 2) & 0x01;
+    // Now print this value
+    UARTprintf("\nHall B: %d", Hall_B_Value);
+
+    Hall_C = GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2);
+    // Shift right by the pin number to get the logical value (0 or 1)
+    Hall_C_Value = (Hall_C >> 2) & 0x01;
+    // Now print this value
+    UARTprintf("\nHall C: %d", Hall_C_Value);
+
     // give the read hall effect sensor lines to updateMotor() to move the motor
+    updateMotor(Hall_A_Value, Hall_B_Value, Hall_C_Value);
+
     // one single phase
     // Recommendation is to use an interrupt on the hall effect sensors GPIO lines 
     // So that the motor continues to be updated every time the GPIO lines change from high to low
     // or low to high
     // Include the updateMotor function call in the ISR to achieve this behaviour.
-
+    enableMotor();
     /* Motor test - ramp up the duty cycle from 10% to 100%, than stop the motor */
     for (;;)
     {
@@ -151,15 +181,31 @@ static void prvMotorTask( void *pvParameters )
 
 void HallSensorHandler(void)
 {
-    
+    int32_t Hall_A;
+    bool Hall_A_Value;
+    int32_t Hall_B;
+    bool Hall_B_Value;
+    int32_t Hall_C;
+    bool Hall_C_Value;
+    UARTprintf("\nINT");
     //1. Read hall effect sensors
+    Hall_A = GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3);
+    // Shift right by the pin number to get the logical value (0 or 1)
+    Hall_A_Value = (Hall_A >> 3) & 0x01; // Bit Shift To Get Bool
 
-    //
+    Hall_B = GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2);
+    Hall_B_Value = (Hall_B >> 2) & 0x01; // Bit Shift To Get Bool
+
+    Hall_C = GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2);
+    Hall_C_Value = (Hall_C >> 2) & 0x01; // Bit Shift To Get Bool
+
     //2. call update motor to change to next phase
-    //   updateMotor(??, ??, ??);
+    updateMotor(Hall_A_Value, Hall_B_Value, Hall_C_Value);
     
     //3. Clear interrupt
-    // GPIOIntClear(??);
+    GPIOIntClear(GPIO_PORTM_BASE, GPIO_PIN_3);
+    GPIOIntClear(GPIO_PORTH_BASE, GPIO_PIN_2);
+    GPIOIntClear(GPIO_PORTN_BASE, GPIO_PIN_2);
 
     // Could also add speed sensing code here too.
 
