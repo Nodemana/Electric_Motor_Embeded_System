@@ -123,6 +123,7 @@ static void prvMotorTask( void *pvParameters )
     int32_t Hall_A;
     int32_t Hall_B;
     int32_t Hall_C;
+    uint32_t ui32Value;
 
     bool success = false;
 
@@ -158,6 +159,22 @@ static void prvMotorTask( void *pvParameters )
     // Include the updateMotor function call in the ISR to achieve this behaviour.
     enableMotor();
     /* Motor test - ramp up the duty cycle from 10% to 100%, than stop the motor */
+
+     // 
+    // Enable the ADC0 module. // 
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0); // // Wait for the ADC0 module to be ready. // 
+    SysCtlPeripheralEnable( SYSCTL_PERIPH_GPIOE );
+    GPIOPinTypeADC( GPIO_PORTE_BASE, GPIO_PIN_3 );
+
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_ADC0)) { } // // Enable the first sample sequencer to capture the value of channel 0 when // the processor trigger occurs. //
+
+
+    ADCSequenceConfigure(ADC0_BASE, ADC_SEQ, ADC_TRIGGER_PROCESSOR, 0); 
+    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQ, 0, ADC_CTL_IE | ADC_CTL_END | ADC_CTL_CH0); 
+    ADCSequenceEnable(ADC0_BASE, ADC_SEQ); // // Trigger the sample sequence. // 
+
+    ADCProcessorTrigger(ADC0_BASE, ADC_SEQ); // // Wait until the sample sequence has completed. // 
+   
     for (;;)
     {
 
@@ -169,6 +186,10 @@ static void prvMotorTask( void *pvParameters )
         setDuty(duty_value);
         vTaskDelay(pdMS_TO_TICKS( 250 ));
         duty_value++;
+        while(!ADCIntStatus(ADC0_BASE, ADC_SEQ, false)) { } // // Read the value from the ADC. // 
+        ADCSequenceDataGet(ADC0_BASE, ADC_SEQ, &ui32Value);
+        UARTprintf("ADC: %d", ui32Value);
+        //ADC0_ISR();
 
     }
 }
