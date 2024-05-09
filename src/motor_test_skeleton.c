@@ -118,7 +118,6 @@ void vCreateMotorTask( void )
 
 static void prvMotorTask( void *pvParameters )
 {
-    int motor_error; 
     uint16_t duty_value = 5;
     uint16_t period_value = 50;
     int32_t Hall_A;
@@ -172,7 +171,7 @@ static void prvMotorTask( void *pvParameters )
         
         setDuty(duty_value);
         vTaskDelay(pdMS_TO_TICKS( 250 ));
-        // duty_value++;
+        duty_value++;
 
     }
 }
@@ -208,6 +207,7 @@ void HallSensorHandler(void)
 
 }
 
+
 /*
  * PID Controller
  */
@@ -216,6 +216,7 @@ uint32_t updated_duty_cycle PID(int error, uint32_t current_duty_cycle)
     int gain = 5
     updated_duty_cycle = current_duty_cycle + (current_duty_cycle * error);
 }
+
 
 bool ConfigADCInputs(void){
     
