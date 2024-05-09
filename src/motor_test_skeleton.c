@@ -72,6 +72,9 @@
 
 #include "motorlib.h"
 
+#define ADC_SEQ 1
+#define ADC_STEP 0
+
 /*-----------------------------------------------------------*/
 
 /*
@@ -87,6 +90,8 @@ void vCreateMotorTask( void );
 /*
  * Hardware interrupt handlers
  */
+
+void ADC0_ISR(void);
 
 /*-----------------------------------------------------------*/
 
@@ -200,22 +205,29 @@ void HallSensorHandler(void)
 }
 
 
-bool ConfigADCInputs(void){
+void ConfigADCInputs(void){
     
     SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC0 );
     SysCtlPeripheralEnable( SYSCTL_PERIPH_GPIOE );
     //Makes GPIO an INPUT and sets them to be ANALOG
     GPIOPinTypeADC( GPIO_PORTE_BASE, GPIO_PIN_3 );
-    #define ADC_SEQ 1;
-    #define ADC_STEP 0;
+
     ADCSequenceConfigure( ADC0_BASE, ADC_SEQ, ADC_TRIGGER_PROCESSOR, 0 );
     //uint32_t ui32Base, uint32_t ui32SequenceNum, uint32_t ui32Step, uint32_t ui32Config
-    ADCSequenceStepConfigure( ADC0_BASE, ADC_SEQ , ADC_STEP , ADC_CTL_IE | ADC_CTL_CH0 |
-    ADC_CTL_END );
+    ADCSequenceStepConfigure( ADC0_BASE, ADC_SEQ, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH0 | ADC_CTL_END );
     ADCSequenceEnable( ADC0_BASE, ADC_SEQ );
     ADCIntClear( ADC0_BASE, ADC_SEQ );
 }
 
-void Read_Current(void) {
-    GPIOPinTypeADC
+void ADC0_ISR(void) {
+    uint32_t pui32ADC0Value[1];
+    // Trigger the ADC conversion.
+    ADCProcessorTrigger(ADC0_BASE, ADC_SEQ);
+    // Wait for conversion to be completed.
+    while(!ADCIntStatus( ADC0_BASE, ADC_SEQ , false) ) { }
+    //Clear ADC Interrupt
+    ADCIntClear(ADC0_BASE, ADC_SEQ);
+    // Read ADC FIFO buffer from sample sequence.
+    ADCSequenceDataGet( ADC0_BASE, ADC_SEQ, pui32ADC0Value );
+    UARTprintf("Current: %d", pui32ADC0Value[0]);
 }
