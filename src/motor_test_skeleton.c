@@ -80,10 +80,6 @@
 static void prvMotorTask( void *pvParameters );
 
 /*
- * PID Controller
- */
-uint32_t updated_duty_cycle PID(int error, uint32_t current_duty_cycle) ;
-/*
  * Called by main() to create the Hello print task.
  */
 void vCreateMotorTask( void );
@@ -117,7 +113,6 @@ void vCreateMotorTask( void )
 
 static void prvMotorTask( void *pvParameters )
 {
-    int motor_error; 
     uint16_t duty_value = 5;
     uint16_t period_value = 50;
     int32_t Hall_A;
@@ -160,33 +155,20 @@ static void prvMotorTask( void *pvParameters )
     /* Motor test - ramp up the duty cycle from 10% to 100%, than stop the motor */
     for (;;)
     {
-        // Determine Error
-        motor_error = period_value - duty_value;
 
-        // Update duty cycle
-        duty_value = PID(motor_error);
-        
-        // if(duty_value>=period_value){
-        //     stopMotor(1);
-        //     continue;
-        // }
+        if(duty_value>=period_value){
+            stopMotor(1);
+            continue;
+        }
 
         setDuty(duty_value);
         vTaskDelay(pdMS_TO_TICKS( 250 ));
-        // duty_value++;
+        duty_value++;
 
     }
 }
 /*-----------------------------------------------------------*/
 
-/*
- * PID Controller
- */
-uint32_t updated_duty_cycle PID(int error, uint32_t current_duty_cycle)
-{
-    int gain = 5
-    updated_duty_cycle = current_duty_cycle + (current_duty_cycle * error);
-}
 
 /* Interrupt handlers */
 
@@ -215,24 +197,4 @@ void HallSensorHandler(void)
 
     // Could also add speed sensing code here too.
 
-}
-
-bool ConfigADCInputs(void){
-    
-    SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC0 );
-    SysCtlPeripheralEnable( SYSCTL_PERIPH_GPIOE );
-    //Makes GPIO an INPUT and sets them to be ANALOG
-    GPIOPinTypeADC( GPIO_PORTE_BASE, GPIO_PIN_3 );
-    #define ADC_SEQ 1;
-    #define ADC_STEP 0;
-    ADCSequenceConfigure( ADC0_BASE, ADC_SEQ , ADC_TRIGGER_PROCESSOR, 0 );
-    //uint32_t ui32Base, uint32_t ui32SequenceNum, uint32_t ui32Step, uint32_t ui32Config
-    ADCSequenceStepConfigure( ADC0_BASE, ADC_SEQ , ADC_STEP , ADC_CTL_IE | ADC_CTL_CH0 |
-    ADC_CTL_END );
-    ADCSequenceEnable( ADC0_BASE, ADC_SEQ );
-    ADCIntClear( ADC0_BASE, ADC_SEQ );
-}
-
-void Read_Current(void) {
-    GPIOPinTypeADC
 }
