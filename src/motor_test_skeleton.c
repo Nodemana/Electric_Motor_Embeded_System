@@ -82,7 +82,7 @@ static void prvMotorTask( void *pvParameters );
 /*
  * PID Controller
  */
-uint16_t updated_duty_cycle PID(int32_t error, uint16_t current_duty_cycle);
+uint16_t PID(int32_t error, uint16_t current_duty_cycle);
 
 /*
  * Called by main() to create the Hello print task.
@@ -123,6 +123,7 @@ static void prvMotorTask( void *pvParameters )
     int32_t Hall_A;
     int32_t Hall_B;
     int32_t Hall_C;
+    int32_t motor_error;
 
     bool success = false;
 
@@ -160,8 +161,7 @@ static void prvMotorTask( void *pvParameters )
     /* Motor test - ramp up the duty cycle from 10% to 100%, than stop the motor */
     for (;;)
     {
-        // Determine Error
-        int32_t motor_error = period_value - duty_value;
+        motor_error = period_value - duty_value;
         // Update duty_value
         duty_value = PID(motor_error, duty_value);
 
@@ -172,7 +172,7 @@ static void prvMotorTask( void *pvParameters )
         
         setDuty(duty_value);
         vTaskDelay(pdMS_TO_TICKS( 250 ));
-        duty_value++;
+        // duty_value++;
 
     }
 }
@@ -212,7 +212,8 @@ void HallSensorHandler(void)
 /*
  * PID Controller
  */
-uint16_t updated_duty_cycle PID(int32_t error, uint16_t current_duty_cycle)
+
+uint16_t PID(int32_t error, uint16_t current_duty_cycle)
 {
     uint8_t gain = 5;
     return current_duty_cycle + (gain * error);
