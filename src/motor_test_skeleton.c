@@ -58,6 +58,8 @@
 /* Kernel includes. */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
+
 
 /* Hardware includes. */
 #include "inc/hw_ints.h"
@@ -77,15 +79,20 @@
 
 /*-----------------------------------------------------------*/
 
+// Semaphores
+extern SemaphoreHandle_t xADCSemaphore;
+
 /*
  * The tasks as described in the comments at the top of this file.
  */
 static void prvMotorTask( void *pvParameters );
+static void prvCurrentSensorTask( void *pvParameters); // Current Sensor Task
 
 /*
  * Called by main() to create the Hello print task.
  */
 void vCreateMotorTask( void );
+void ConfigADCInputs( void );
 
 /*
  * Hardware interrupt handlers
@@ -108,7 +115,14 @@ void vCreateMotorTask( void )
      *  - The priority assigned to the task.
      *  - The task handle is NULL */
     xTaskCreate( prvMotorTask,
-                 "Hello",
+                 "Motor",
+                 configMINIMAL_STACK_SIZE,
+                 NULL,
+                 tskIDLE_PRIORITY + 1,
+                 NULL );
+
+    xTaskCreate( prvCurrentSensorTask,
+                 "Current",
                  configMINIMAL_STACK_SIZE,
                  NULL,
                  tskIDLE_PRIORITY + 1,
@@ -123,8 +137,7 @@ static void prvMotorTask( void *pvParameters )
     int32_t Hall_A;
     int32_t Hall_B;
     int32_t Hall_C;
-    uint32_t ui32Value;
-    uint32_t num_samples;
+
 
     bool success = false;
 
@@ -133,22 +146,22 @@ static void prvMotorTask( void *pvParameters )
     /* Set at >10% to get it to start */
     setDuty(duty_value);
 
-    UARTprintf("\n Success: %d", success);
+    //UARTprintf("\n Success: %d", success);
     /* Kick start the motor */
 
     //1. Read hall effect sensors
     // Do an initial read of the hall effect sensor GPIO lines
     Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
 
-    UARTprintf("\nHall A: %d", Hall_A);
+    //UARTprintf("\nHall A: %d", Hall_A);
 
     Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
-    UARTprintf("\nHall B: %d", Hall_B);
+    //UARTprintf("\nHall B: %d", Hall_B);
 
     Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
-    UARTprintf("\nHall C: %d", Hall_C);
+    //UARTprintf("\nHall C: %d", Hall_C);
 
     // give the read hall effect sensor lines to updateMotor() to move the motor
     updateMotor(Hall_A, Hall_B, Hall_C);
@@ -158,27 +171,12 @@ static void prvMotorTask( void *pvParameters )
     // So that the motor continues to be updated every time the GPIO lines change from high to low
     // or low to high
     // Include the updateMotor function call in the ISR to achieve this behaviour.
+
     enableMotor();
     /* Motor test - ramp up the duty cycle from 10% to 100%, than stop the motor */
-
-     // 
-    // Enable the ADC0 module. // 
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0); // // Wait for the ADC0 module to be ready. // 
-    SysCtlPeripheralEnable( SYSCTL_PERIPH_GPIOE );
-    GPIOPinTypeADC( GPIO_PORTE_BASE, GPIO_PIN_3 );
-
-    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_ADC0)) { } // // Enable the first sample sequencer to capture the value of channel 0 when // the processor trigger occurs. //
-
-
-    ADCSequenceConfigure(ADC0_BASE, ADC_SEQ, ADC_TRIGGER_PROCESSOR, 0); 
-    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQ, 1, ADC_CTL_IE | ADC_CTL_END | ADC_CTL_CH0); 
-    ADCSequenceEnable(ADC0_BASE, ADC_SEQ); // // Trigger the sample sequence. // 
-
-     // // Wait until the sample sequence has completed. // 
-   
     for (;;)
     {
-        ADCProcessorTrigger(ADC0_BASE, ADC_SEQ);
+        //ADCProcessorTrigger(ADC0_BASE, ADC_SEQ);
         if(duty_value>=period_value){
             stopMotor(1);
         } else {
@@ -187,15 +185,34 @@ static void prvMotorTask( void *pvParameters )
             duty_value++;
             
         }
-        while(!ADCIntStatus(ADC0_BASE, ADC_SEQ, false)) { } // While Transmitting wait..
-        num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ, &ui32Value); // Read the value from the ADC.
-        UARTprintf("\nADC: %d", ui32Value);
-        UARTprintf("\nNum Samples: %d\n\n", num_samples);
-
+       // while(!ADCIntStatus(ADC0_BASE, ADC_SEQ, false)) { } // While Transmitting wait..
         //ADC0_ISR();
 
     }
 }
+
+static void prvCurrentSensorTask( void *pvParameters) {
+    uint32_t ui32Value;
+    uint32_t num_samples;
+
+    //UARTprintf("Before ADC Config\n\n");
+    // Initialise ADC
+    ConfigADCInputs();
+    //UARTprintf("After ADC Config\n\n");
+
+    for (;;) {
+        ADCProcessorTrigger(ADC0_BASE, ADC_SEQ);
+        //UARTprintf("Before Sem!\n\n");
+        if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
+            num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ, &ui32Value); // Read the value from the ADC.
+            UARTprintf("\nADC: %d", ui32Value);
+            UARTprintf("\nNum Samples: %d\n\n", num_samples);
+        }
+        vTaskDelay(pdMS_TO_TICKS( 250 ));
+    }
+
+}        
+
 /*-----------------------------------------------------------*/
 
 
@@ -229,8 +246,10 @@ void HallSensorHandler(void)
 }
 
 
-void ConfigADCInputs(void){
+void ConfigADCInputs(void)
+{
     
+    // ADC ISENC (Phase C Current) Config
     SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC0 );
     SysCtlPeripheralEnable( SYSCTL_PERIPH_GPIOE );
     //Makes GPIO an INPUT and sets them to be ANALOG
@@ -240,18 +259,16 @@ void ConfigADCInputs(void){
     //uint32_t ui32Base, uint32_t ui32SequenceNum, uint32_t ui32Step, uint32_t ui32Config
     ADCSequenceStepConfigure( ADC0_BASE, ADC_SEQ, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH0 | ADC_CTL_END );
     ADCSequenceEnable( ADC0_BASE, ADC_SEQ );
-    ADCIntClear( ADC0_BASE, ADC_SEQ );
+
+    ADCIntRegister(ADC0_BASE, ADC_SEQ, ADC0_ISR); // Registers the ISR with the specific ADC and Sequence.
+    ADCIntEnableEx(ADC0_BASE, ADC_INT_SS1); // Enables Interrupts for specific Sequence
+
 }
 
-void ADC0_ISR(void) {
-    uint32_t pui32ADC0Value[1];
-    // Trigger the ADC conversion.
-    ADCProcessorTrigger(ADC0_BASE, ADC_SEQ);
-    // Wait for conversion to be completed.
-    while(!ADCIntStatus( ADC0_BASE, ADC_SEQ , false) ) { }
-    //Clear ADC Interrupt
+void ADC0_ISR(void) 
+{
+    BaseType_t xCurrentSensorTaskWoken;
+    xSemaphoreGiveFromISR( xADCSemaphore, &xCurrentSensorTaskWoken);
     ADCIntClear(ADC0_BASE, ADC_SEQ);
-    // Read ADC FIFO buffer from sample sequence.
-    ADCSequenceDataGet( ADC0_BASE, ADC_SEQ, pui32ADC0Value );
-    UARTprintf("Current: %d", pui32ADC0Value[0]);
+    portYIELD_FROM_ISR( &xCurrentSensorTaskWoken );  
 }

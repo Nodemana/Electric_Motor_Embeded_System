@@ -52,6 +52,8 @@
 /* Kernel includes. */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
+
 
 /* Hardware includes. */
 #include "driverlib/pin_map.h"
@@ -78,7 +80,9 @@
 /* The system clock frequency. */
 uint32_t g_ui32SysClock;
 
-// Test
+// Semaphores
+SemaphoreHandle_t xADCSemaphore = NULL;
+
 /* Set up the hardware ready to run this demo. */
 static void prvSetupHardware( void );
 
@@ -98,12 +102,17 @@ int main( void )
     /* Prepare the hardware to run this demo. */
     prvSetupHardware();
 
-    /* Create the Hello task to output a message over UART. */
-    vCreateMotorTask();
+    // Semaphore Initialisation
+    xADCSemaphore = xSemaphoreCreateBinary();
 
-    /* Start the tasks and timer running. */
-    vTaskStartScheduler();
+     if (xADCSemaphore != NULL)
+    {
+        /* Create the Hello task to output a message over UART. */
+        vCreateMotorTask();
 
+        /* Start the tasks and timer running. */
+        vTaskStartScheduler();
+    }
     /* If all is well, the scheduler will now be running, and the following
     line will never be reached.  If the following line does execute, then
     there was insufficient FreeRTOS heap memory available for the idle and/or
