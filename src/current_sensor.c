@@ -143,24 +143,24 @@ static void prvCurrentSensorTask( void *pvParameters) {
         //UARTprintf("Before Sem!\n\n");
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ_1, &ui32Value); // Read the value from the ADC.
-            UARTprintf("\nPhase C ADC: %d", ui32Value);
-            UARTprintf("\nNum Samples: %d\n\n", num_samples);
+            //UARTprintf("\nPhase C ADC: %d", ui32Value);
+            //UARTprintf("\nNum Samples: %d\n\n", num_samples);
         }
 
         ADCProcessorTrigger(ADC0_BASE, ADC_SEQ_2);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ_2, &ui32Value); // Read the value from the ADC.
-            UARTprintf("\nPhase B ADC: %d", ui32Value);
-            UARTprintf("\nNum Samples: %d\n\n", num_samples);
+            //UARTprintf("\nPhase B ADC: %d", ui32Value);
+            //UARTprintf("\nNum Samples: %d\n\n", num_samples);
         }
 
         ADCProcessorTrigger(ADC0_BASE, ADC_SEQ_3);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ_3, &ui32Value); // Read the value from the ADC.
-            UARTprintf("\nPhase A ADC: %d", ui32Value);
-            UARTprintf("\nNum Samples: %d\n\n", num_samples);
+            //UARTprintf("\nPhase A ADC: %d", ui32Value);
+            //UARTprintf("\nNum Samples: %d\n\n", num_samples);
         }
 
         vTaskDelay(pdMS_TO_TICKS( 250 ));

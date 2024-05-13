@@ -154,17 +154,12 @@ static void prvMotorTask( void *pvParameters )
     // give the read hall effect sensor lines to updateMotor() to move the motor
     updateMotor(Hall_A, Hall_B, Hall_C);
 
-    // one single phase
-    // Recommendation is to use an interrupt on the hall effect sensors GPIO lines 
-    // So that the motor continues to be updated every time the GPIO lines change from high to low
-    // or low to high
-    // Include the updateMotor function call in the ISR to achieve this behaviour.
-
     enableMotor();
-    /* Motor test - ramp up the duty cycle from 10% to 100%, than stop the motor */
     for (;;)
     {
         motor_error = period_value - duty_value;
+        UARTprintf("Motor Error: %d\n", motor_error);
+        UARTprintf("Duty Value: %d\n\n", duty_value);
         // Update duty_value
         duty_value = PID(motor_error, duty_value);
 
@@ -219,6 +214,6 @@ void HallSensorHandler(void)
 
 uint16_t PID(int32_t error, uint16_t current_duty_cycle)
 {
-    uint8_t gain = 5;
+    float gain = 0.2;
     return current_duty_cycle + (gain * error);
 }
