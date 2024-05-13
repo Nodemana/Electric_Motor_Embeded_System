@@ -81,6 +81,11 @@
 static void prvMotorTask( void *pvParameters );
 
 /*
+ * PID Controller
+ */
+uint16_t PID(int32_t error, uint16_t current_duty_cycle);
+
+/*
  * Called by main() to create the Hello print task.
  */
 void vCreateMotorTask( void );
@@ -120,7 +125,7 @@ static void prvMotorTask( void *pvParameters )
     int32_t Hall_A;
     int32_t Hall_B;
     int32_t Hall_C;
-
+    int32_t motor_error;
 
     bool success = false;
 
@@ -159,17 +164,18 @@ static void prvMotorTask( void *pvParameters )
     /* Motor test - ramp up the duty cycle from 10% to 100%, than stop the motor */
     for (;;)
     {
-        //ADCProcessorTrigger(ADC0_BASE, ADC_SEQ);
-        if(duty_value>=period_value){
-            stopMotor(1);
-        } else {
-            setDuty(duty_value);
-            vTaskDelay(pdMS_TO_TICKS( 250 ));
-            duty_value++;
-            
-        }
-       // while(!ADCIntStatus(ADC0_BASE, ADC_SEQ, false)) { } // While Transmitting wait..
-        //ADC0_ISR();
+        motor_error = period_value - duty_value;
+        // Update duty_value
+        duty_value = PID(motor_error, duty_value);
+
+        // if(duty_value>=period_value){
+        //     stopMotor(1);
+        //     continue;
+        // }
+        
+        setDuty(duty_value);
+        vTaskDelay(pdMS_TO_TICKS( 250 ));
+        // duty_value++;
 
     }
 }
@@ -204,4 +210,15 @@ void HallSensorHandler(void)
 
     // Could also add speed sensing code here too.
 
+}
+
+
+/*
+ * PID Controller
+ */
+
+uint16_t PID(int32_t error, uint16_t current_duty_cycle)
+{
+    uint8_t gain = 5;
+    return current_duty_cycle + (gain * error);
 }
