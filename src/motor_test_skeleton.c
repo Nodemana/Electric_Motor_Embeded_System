@@ -124,6 +124,7 @@ static void prvMotorTask( void *pvParameters )
     int32_t Hall_B;
     int32_t Hall_C;
     uint32_t ui32Value;
+    uint32_t num_samples;
 
     bool success = false;
 
@@ -170,25 +171,27 @@ static void prvMotorTask( void *pvParameters )
 
 
     ADCSequenceConfigure(ADC0_BASE, ADC_SEQ, ADC_TRIGGER_PROCESSOR, 0); 
-    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQ, 0, ADC_CTL_IE | ADC_CTL_END | ADC_CTL_CH0); 
+    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQ, 1, ADC_CTL_IE | ADC_CTL_END | ADC_CTL_CH0); 
     ADCSequenceEnable(ADC0_BASE, ADC_SEQ); // // Trigger the sample sequence. // 
 
-    ADCProcessorTrigger(ADC0_BASE, ADC_SEQ); // // Wait until the sample sequence has completed. // 
+     // // Wait until the sample sequence has completed. // 
    
     for (;;)
     {
-
+        ADCProcessorTrigger(ADC0_BASE, ADC_SEQ);
         if(duty_value>=period_value){
             stopMotor(1);
-            continue;
+        } else {
+            setDuty(duty_value);
+            vTaskDelay(pdMS_TO_TICKS( 250 ));
+            duty_value++;
+            
         }
+        while(!ADCIntStatus(ADC0_BASE, ADC_SEQ, false)) { } // While Transmitting wait..
+        num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ, &ui32Value); // Read the value from the ADC.
+        UARTprintf("\nADC: %d", ui32Value);
+        UARTprintf("\nNum Samples: %d\n\n", num_samples);
 
-        setDuty(duty_value);
-        vTaskDelay(pdMS_TO_TICKS( 250 ));
-        duty_value++;
-        while(!ADCIntStatus(ADC0_BASE, ADC_SEQ, false)) { } // // Read the value from the ADC. // 
-        ADCSequenceDataGet(ADC0_BASE, ADC_SEQ, &ui32Value);
-        UARTprintf("ADC: %d", ui32Value);
         //ADC0_ISR();
 
     }
