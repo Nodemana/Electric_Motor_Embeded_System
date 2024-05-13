@@ -92,6 +92,7 @@ static void prvConfigureUART(void);
 
 /* API to trigger the 'Hello world' task. */
 extern void vCreateMotorTask( void );
+extern void vCreateCurrentSensorTask( void );
 
 static void prvConfigureHallInts( void );
 
@@ -109,7 +110,7 @@ int main( void )
     {
         /* Create the Hello task to output a message over UART. */
         vCreateMotorTask();
-
+        vCreateCurrentSensorTask();
         /* Start the tasks and timer running. */
         vTaskStartScheduler();
     }
