@@ -147,6 +147,7 @@ void sensorOpt3001Enable(bool enable)
  *
  * @return      TRUE if valid data
  **************************************************************************************************/
+
 bool sensorOpt3001Read(uint16_t *rawData)
 {
 	bool data_ready;

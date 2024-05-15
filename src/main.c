@@ -90,6 +90,9 @@ static void prvSetupHardware( void );
  * as the example is running. */
 static void prvConfigureUART(void);
 
+/* Set up the I2C2 for temp and lux sensor. */
+static void prvConfigureI2C2(void);
+
 /* API to trigger the 'Hello world' task. */
 extern void vCreateMotorTask( void );
 
@@ -97,11 +100,15 @@ extern void vCreateMotorTask( void );
 static void prvConfigureHallInts( void );
 
 /* ------------------------------------------------------------------------------------------------
- *                                EXTERN FUNCTION PROTOTYPES
+ *                                FUNCTION TASK PROTOTYPES
  * ------------------------------------------------------------------------------------------------
  */
 /* API to trigger the LUX task. */
 extern void vTEMPTask(void);
+
+/* API to trigger the LUX task. */
+extern void vLUXTask(void);
+
 
 /* ------------------------------------------------------------------------------------------------
  *                                   GLOBAL VARIABLES
@@ -120,8 +127,10 @@ int main( void )
 
     /* Create the Hello task to output a message over UART. */
     vCreateMotorTask();
-    /* Read Temp Task */
+
+    /* Tasks for scheduler to run */
     vTEMPTask();
+    vLUXTask();
 
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
@@ -161,6 +170,31 @@ static void prvConfigureUART(void)
 }
 /*-----------------------------------------------------------*/
 
+static void prvConfigureI2C2(void)
+{
+    //
+    // The I2C0 peripheral must be enabled before use.
+    //
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+
+    //
+    // Configure the pin muxing for I2C0 functions on port B2 and B3.
+    // This step is not necessary if your part does not support pin muxing.
+    //
+    GPIOPinConfigure(GPIO_PN5_I2C2SCL);
+    GPIOPinConfigure(GPIO_PN4_I2C2SDA);
+
+    //
+    // Select the I2C function for these pins.  This function will also
+    // configure the GPIO pins pins for I2C operation, setting them to
+    // open-drain operation with weak pull-ups.  Consult the data sheet
+    // to see which functions are allocated per pin.
+    //
+    GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
+    GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
+    I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
+}
 static void prvSetupHardware(void)
 {
     /* Run from the PLL at configCPU_CLOCK_HZ MHz. */
@@ -173,6 +207,9 @@ static void prvSetupHardware(void)
 
     /* Configure UART0 to send messages to terminal. */
     prvConfigureUART();
+
+    /* Configure the I2C2 for temp and lux sensor comms */
+    prvConfigureI2C2();
 
     //GPIOPinTypeGPIOInput(GPIO_PORTM_BASE, GPIO_PIN_3);
     //GPIOPinTypeGPIOInput(GPIO_PORTH_BASE, GPIO_PIN_2);

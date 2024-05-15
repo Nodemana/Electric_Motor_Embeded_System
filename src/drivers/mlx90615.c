@@ -44,7 +44,7 @@
 #include <math.h>
 #include "i2cOptDriver.h"
 #include "i2cTmpDriver.h"
-#include "mlx90615.h"
+// #include "mlx90615.h"
 #include "utils/uartstdio.h"
 
 /* ------------------------------------------------------------------------------------------------
@@ -68,7 +68,7 @@
 #define READ_RAW_OBJECT_TEMP			0x27 // OP Code: 0010 aaaa, where aaaa is 4 LSBits of the memory map address to be read / written. We want T_A = 0x07
 #define READ_RAW_AMBIENT_TEMP			0x26 // OP Code: 0010 aaaa, where aaaa is 4 LSBits of the memory map address to be read / written. We want T_O = 0x06
 #define SLAVE_ADDRESS_WRITE				0xB6 // First 7 bits are SA, last bit is w/r, where w = 0, r = 1
-#define SLAVE_ADDRESS_WRITE				0xB7 // First 7 bits are SA, last bit is w/r, where w = 0, r = 1	
+#define SLAVE_ADDRESS_READ				0xB7 // First 7 bits are SA, last bit is w/r, where w = 0, r = 1	
 /* Register values */
 #define MANUFACTURER_ID                 0x5449  // TI
 #define DEVICE_ID                       0x3001  // Opt 3001
@@ -92,7 +92,11 @@
  *                                           Local Functions
  * ------------------------------------------------------------------------------------------------
  */
-
+bool sensorMLX90615Init(void);
+void sensorMLX90615Enable(bool enable);
+bool sensorMLX90615Read(uint16_t *rawData);
+void sensorMLX90615Convert(uint16_t rawData, float *convertedLux);
+bool sensorMLX90615Test(void);
 
 /* ------------------------------------------------------------------------------------------------
  *                                           Local Variables
@@ -114,8 +118,7 @@
  **************************************************************************************************/
 bool sensorMLX90615Init(void)
 {
-	sensorMLX90615Enable(false);
-
+	sensorMLX90615Enable(true);
 	return (true);
 }
 
@@ -127,21 +130,11 @@ bool sensorMLX90615Init(void)
  *
  * @return      none
  **************************************************************************************************/
-// void sensorMLX90615Enable(bool enable)
-// {
-// 	uint16_t val;
-
-// 	if (enable)
-// 	{
-// 		val = CONFIG_ENABLE;
-// 	}
-// 	else
-// 	{
-// 		val = CONFIG_DISABLE;
-// 	}
-
-// 	writeI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&val);
-// }
+void sensorMLX90615Enable(bool enable)
+{
+	// Stuff you need to do to enable the sensor
+	// I don't think we need to do anything
+}
 
 
 /**************************************************************************************************
@@ -179,10 +172,10 @@ bool sensorMLX90615Read(uint16_t *rawData)
 
 	if (data_ready)
 	{
-		if (TempReadI2C(MLX90615_I2C_ADDRESS, READ_RAW_OBJECT_TEMP, OBJECT_TEMP, (uint8_t *)&val))
+		if (TempReadI2C_2(MLX90615_I2C_ADDRESS, READ_RAW_OBJECT_TEMP, (uint8_t *)&val))
 		{
 			// Swap bytes
-			// *rawData = (val << 8) | (val>>8 &0xFF);
+			*rawData = val;
 		} 
 		else
 		{
@@ -246,10 +239,6 @@ bool sensorMLX90615Test(void)
  **************************************************************************************************/
 void sensorMLX90615Convert(uint16_t rawData, float *convertedLux)
 {
-	uint16_t e, m;
-
-	m = rawData & 0x0FFF;
-	e = (rawData & 0xF000) >> 12;
-
-	*convertedLux = m * (0.01 * exp2(e));
+	// Convert data 
+	*convertedLux = (rawData * 0.002) - 273.15;
 }
