@@ -44,6 +44,11 @@
  * 
  */
 
+/* ------------------------------------------------------------------------------------------------
+ *                                           INCLUDES
+ * ------------------------------------------------------------------------------------------------
+ */
+
 /* Standard includes. */
 #include <stdio.h>
 #include <stdbool.h>
@@ -70,15 +75,14 @@
 #include "driverlib/gpio.h"
 #include "driverlib/pwm.h"
 
-// Motor lib
+/* Motor includes. */
 #include <motorlib.h>
 
-/*-----------------------------------------------------------*/
+/* ------------------------------------------------------------------------------------------------
+ *                                   LOCAL FUNCTION PROTOTYPES
+ * ------------------------------------------------------------------------------------------------
+ */
 
-/* The system clock frequency. */
-uint32_t g_ui32SysClock;
-
-// Test
 /* Set up the hardware ready to run this demo. */
 static void prvSetupHardware( void );
 
@@ -89,7 +93,23 @@ static void prvConfigureUART(void);
 /* API to trigger the 'Hello world' task. */
 extern void vCreateMotorTask( void );
 
+/* API to configure Hall sensors. */
 static void prvConfigureHallInts( void );
+
+/* ------------------------------------------------------------------------------------------------
+ *                                EXTERN FUNCTION PROTOTYPES
+ * ------------------------------------------------------------------------------------------------
+ */
+/* API to trigger the LUX task. */
+extern void vTEMPTask(void);
+
+/* ------------------------------------------------------------------------------------------------
+ *                                   GLOBAL VARIABLES
+ * ------------------------------------------------------------------------------------------------
+ */
+
+/* The system clock frequency. */
+uint32_t g_ui32SysClock;
 
 /*-----------------------------------------------------------*/
 
@@ -100,6 +120,8 @@ int main( void )
 
     /* Create the Hello task to output a message over UART. */
     vCreateMotorTask();
+    /* Read Temp Task */
+    vTEMPTask();
 
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
