@@ -158,8 +158,8 @@ static void prvMotorTask( void *pvParameters )
     for (;;)
     {
         motor_error = period_value - duty_value;
-        UARTprintf("Motor Error: %d\n", motor_error);
-        UARTprintf("Duty Value: %d\n\n", duty_value);
+        //UARTprintf("Motor Error: %d\n", motor_error);
+        //UARTprintf("Duty Value: %d\n\n", duty_value);
         // Update duty_value
         duty_value = PID(motor_error, duty_value);
 
