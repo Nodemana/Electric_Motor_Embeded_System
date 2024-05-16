@@ -98,10 +98,6 @@ static void prvReadTempSensor(void *pvParameters)
     {
 
         count++;
-
-        // Attempt to read and convert light value from OPT3001 sensor
-        success = sensorMLX90615Read(&rawData);
-
         SysCtlDelay(g_ui32SysClock/10);
         // count++;
         // Read and convert light value from OPT3001 sensor

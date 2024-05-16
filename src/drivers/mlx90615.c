@@ -160,16 +160,6 @@ bool sensorMLX90615Read(uint16_t *rawData)
 	bool data_ready = 1;
 	uint16_t val;
 
-	//Get status of configuration register
-	// if (TempReadI2C(MLX90615_I2C_ADDRESS, READ_RAW_OBJECT_TEMP, (uint8_t *)&val))
-	// {
-	// 	data_ready = ((val>>8 &0xFF) & DATA_RDY_BIT) == DATA_RDY_BIT;
-	// }
-	// else
-	// {
-	// 	return false;
-	// }
-
 	if (data_ready)
 	{
 		if (TempReadI2C_2(MLX90615_I2C_ADDRESS, READ_RAW_OBJECT_TEMP, (uint8_t *)&val))
