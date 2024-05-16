@@ -69,11 +69,20 @@
 #include "utils/uartstdio.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pwm.h"
+#include "semphr.h"
 
 #include "motorlib.h"
 
 
 /*-----------------------------------------------------------*/
+
+volatile uint32_t g_ui32TimeStamp = 0;
+uint32_t previous_g_ui32TimeStamp = 0;
+extern SemaphoreHandle_t xSpeedSemaphore;
+int32_t g_Hall_A;
+int32_t g_Hall_B;
+int32_t g_Hall_C;
+
 
 /*
  * The tasks as described in the comments at the top of this file.
@@ -121,11 +130,11 @@ void vCreateMotorTask( void )
 static void prvMotorTask( void *pvParameters )
 {
     uint16_t duty_value = 5;
-    uint16_t period_value = 50;
-    int32_t Hall_A;
-    int32_t Hall_B;
-    int32_t Hall_C;
+    uint16_t period_value = 100;
+    uint16_t desired_duty = 100;
     int32_t motor_error;
+    uint32_t time_difference;
+    uint32_t one_revolution_ticks;
 
     bool success = false;
 
@@ -139,25 +148,26 @@ static void prvMotorTask( void *pvParameters )
 
     //1. Read hall effect sensors
     // Do an initial read of the hall effect sensor GPIO lines
-    Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
+    g_Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
 
-    //UARTprintf("\nHall A: %d", Hall_A);
+   // UARTprintf("\nHall A: %d", Hall_A);
 
-    Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
+    g_Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
-    //UARTprintf("\nHall B: %d", Hall_B);
+   // UARTprintf("\nHall B: %d", Hall_B);
 
-    Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
+    g_Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
-    //UARTprintf("\nHall C: %d", Hall_C);
+   // UARTprintf("\nHall C: %d\n", Hall_C);
 
     // give the read hall effect sensor lines to updateMotor() to move the motor
-    updateMotor(Hall_A, Hall_B, Hall_C);
+    updateMotor(g_Hall_A, g_Hall_B, g_Hall_C);
 
     enableMotor();
+    previous_g_ui32TimeStamp = xTaskGetTickCount();
     for (;;)
     {
-        motor_error = period_value - duty_value;
+        motor_error = desired_duty - duty_value;
         //UARTprintf("Motor Error: %d\n", motor_error);
         //UARTprintf("Duty Value: %d\n\n", duty_value);
         // Update duty_value
@@ -169,6 +179,13 @@ static void prvMotorTask( void *pvParameters )
         // }
         
         setDuty(duty_value);
+        if( xSemaphoreTake(xSpeedSemaphore, 0) == pdPASS) {
+            time_difference = g_ui32TimeStamp - previous_g_ui32TimeStamp;
+            one_revolution_ticks = time_difference * 12;
+            UARTprintf("Ticks per Revolution: %d\n", one_revolution_ticks);
+            //UARTprintf("Ticks = %d\n", g_ui32TimeStamp);
+            previous_g_ui32TimeStamp = g_ui32TimeStamp;
+        }
         vTaskDelay(pdMS_TO_TICKS( 250 ));
         // duty_value++;
 
@@ -185,18 +202,20 @@ void HallSensorHandler(void)
     int32_t Hall_A;
     int32_t Hall_B;
     int32_t Hall_C;
+    BaseType_t xMotorTaskWoken;
+
 
     //1. Read hall effect sensors
-    Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
+    g_Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
     // Shift right by the pin number to get the logical value (0 or 1)
 
-    Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
+    g_Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
 
-    Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
+    g_Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
     //2. call update motor to change to next phase
-    updateMotor(Hall_A, Hall_B, Hall_C);
+    updateMotor(g_Hall_A, g_Hall_B, g_Hall_C);
     
     //3. Clear interrupt
     GPIOIntClear(GPIO_PORTM_BASE, GPIO_PIN_3);
@@ -204,7 +223,10 @@ void HallSensorHandler(void)
     GPIOIntClear(GPIO_PORTN_BASE, GPIO_PIN_2);
 
     // Could also add speed sensing code here too.
-
+    g_ui32TimeStamp = xTaskGetTickCount();
+    xSemaphoreGiveFromISR( xSpeedSemaphore, &xMotorTaskWoken);
+    portYIELD_FROM_ISR( &xMotorTaskWoken );  
+    //UARTprintf("Ticks = %d", g_ui32TimeStamp);
 }
 
 

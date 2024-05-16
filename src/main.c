@@ -82,6 +82,7 @@ uint32_t g_ui32SysClock;
 
 // Semaphores
 SemaphoreHandle_t xADCSemaphore = NULL;
+SemaphoreHandle_t xSpeedSemaphore = NULL;
 
 /* Set up the hardware ready to run this demo. */
 static void prvSetupHardware( void );
@@ -105,8 +106,9 @@ int main( void )
 
     // Semaphore Initialisation
     xADCSemaphore = xSemaphoreCreateBinary();
+    xSpeedSemaphore = xSemaphoreCreateBinary();
 
-     if (xADCSemaphore != NULL)
+     if ((xADCSemaphore != NULL) && (xSpeedSemaphore != NULL))
     {
         /* Create the Hello task to output a message over UART. */
         vCreateMotorTask();
