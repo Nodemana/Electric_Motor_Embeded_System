@@ -23,8 +23,7 @@
 
 // ----------------------- Exported prototypes -----------------------
 extern bool TempWriteI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *Data);
-extern bool TempReadI2C(uint8_t ui8Addr, uint8_t uiCmd, uint8_t ui8SlaveRead, uint8_t *Data);
-extern bool TempReadI2C_2(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data);
+extern bool TempReadI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data);
 
 
 

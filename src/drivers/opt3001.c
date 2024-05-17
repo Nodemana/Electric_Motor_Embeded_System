@@ -153,7 +153,7 @@ bool sensorOpt3001Read(uint16_t *rawData)
 	bool data_ready;
 	uint16_t val;
 
-	//Get status of configuration register
+	// Get status of configuration register
 	if (readI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val))
 	{
 		data_ready = ((val>>8 &0xFF) & DATA_RDY_BIT) == DATA_RDY_BIT;

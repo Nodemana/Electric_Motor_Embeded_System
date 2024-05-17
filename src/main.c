@@ -105,7 +105,8 @@ static void prvConfigureHallInts( void );
  */
 /* API to trigger the LUX task. */
 extern void vTEMPTask(void);
-
+/* API to trigger the extern void vGPT_TEMPTask(void) task. */
+// extern void vGPT_TEMPTask(void);
 /* API to trigger the LUX task. */
 extern void vLUXTask(void);
 
@@ -131,6 +132,7 @@ int main( void )
     /* Tasks for scheduler to run */
     vTEMPTask();
     vLUXTask();
+    // vGPT_TEMPTask();
 
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
@@ -194,6 +196,8 @@ static void prvConfigureI2C2(void)
     GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
     GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
     I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
+
+    I2CMasterEnable(I2C2_BASE);
 }
 static void prvSetupHardware(void)
 {

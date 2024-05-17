@@ -111,9 +111,8 @@ static void prvReadTempSensor(void *pvParameters)
             // Construct Text
             // sprintf(tempStr, "Lux: %5.2f\n", convertedLux);
             int lux_int = (int)convertedLux;
-            UARTprintf("Lux: %5d\n", lux_int);
-            UARTprintf("Raw Temp: %d\n", rawData);
-            UARTprintf("Converted Temp: %d\n", lux_int);
+            // UARTprintf("Raw Temp: %d\n", rawData);
+            // UARTprintf("Converted Temp: %d\n", lux_int);
         }
         
     }

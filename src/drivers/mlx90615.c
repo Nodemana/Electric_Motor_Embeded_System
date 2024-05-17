@@ -1,5 +1,5 @@
 /**************************************************************************************************
- *  Filename:       opt3001.c
+ *  Filename:       mlx90615.c
  *  Revised:        
  *  Revision:       
  *
@@ -55,6 +55,10 @@
 /* Slave address */
 #define MLX90615_I2C_ADDRESS            0x5B // Refer to SMBus slave address. it must be the LS 7 bytes (6-0)
 
+/* Commands */
+#define READ_RAW_OBJECT_TEMP			0x27 // OP Code: 0010 aaaa, where aaaa is 4 LSBits of the memory map address to be read / written. We want T_A = 0x07
+#define READ_RAW_AMBIENT_TEMP			0x26 // OP Code: 0010 aaaa, where aaaa is 4 LSBits of the memory map address to be read / written. We want T_O = 0x06
+
 /* Register addresses */
 #define REG_EMISSIVITY                  0x02
 #define RAW_IR_DATA						0x05
@@ -64,29 +68,9 @@
 #define ID_NUMBER_1          		    0x0E
 #define ID_NUMBER_2                     0x0F
 
-/* Commands */
-#define READ_RAW_OBJECT_TEMP			0x27 // OP Code: 0010 aaaa, where aaaa is 4 LSBits of the memory map address to be read / written. We want T_A = 0x07
-#define READ_RAW_AMBIENT_TEMP			0x26 // OP Code: 0010 aaaa, where aaaa is 4 LSBits of the memory map address to be read / written. We want T_O = 0x06
 #define SLAVE_ADDRESS_WRITE				0xB6 // First 7 bits are SA, last bit is w/r, where w = 0, r = 1
 #define SLAVE_ADDRESS_READ				0xB7 // First 7 bits are SA, last bit is w/r, where w = 0, r = 1	
-/* Register values */
-#define MANUFACTURER_ID                 0x5449  // TI
-#define DEVICE_ID                       0x3001  // Opt 3001
 
-#define CONFIG_RESET                    0xC810                   
-#define CONFIG_TEST                     0xCC10
-
-#define CONFIG_ENABLE                   0x10C4 // equivalent to 0xC410 as upper and lower bytes are received in reverse (100 ms, continuous)
-#define CONFIG_DISABLE                  0x10C0 //  equivalent to 0xC010 as upper and lower bytes are received in reverse  (100 ms, shutdown)
-
-/* Bit values */
-#define DATA_RDY_BIT                    0x0080  // Data ready
-
-/* Register length */
-#define REGISTER_LENGTH                 2
-
-/* Sensor data size */
-#define DATA_LENGTH                     2
 
 /* ------------------------------------------------------------------------------------------------
  *                                           Local Functions
@@ -157,21 +141,13 @@ void sensorMLX90615Enable(bool enable)
 */
 bool sensorMLX90615Read(uint16_t *rawData)
 {
-	bool data_ready = 1;
 	uint16_t val;
 
-	if (data_ready)
+	if (TempReadI2C(MLX90615_I2C_ADDRESS, READ_RAW_AMBIENT_TEMP, (uint8_t *)&val))
 	{
-		if (TempReadI2C_2(MLX90615_I2C_ADDRESS, READ_RAW_OBJECT_TEMP, (uint8_t *)&val))
-		{
-			// Swap bytes
-			*rawData = val;
-		} 
-		else
-		{
-			return false;
-		}
-	}
+		// Swap bytes
+		*rawData = val;
+	} 
 	else
 	{
 		return false;
@@ -189,31 +165,31 @@ bool sensorMLX90615Read(uint16_t *rawData)
  **************************************************************************************************/
 bool sensorMLX90615Test(void)
 {
-	uint16_t val;
+	// uint16_t val;
 	
-	// Check manufacturer ID
-	readI2C(MLX90615_I2C_ADDRESS, ID_NUMBER_1, (uint8_t *)&val);
-	val = (val << 8) | (val>>8 &0xFF);
+	// // Check manufacturer ID
+	// readI2C(MLX90615_I2C_ADDRESS, ID_NUMBER_1, (uint8_t *)&val);
+	// val = (val << 8) | (val>>8 &0xFF);
 
-	if (val != MANUFACTURER_ID)
-	{
-		return false;
-	}
+	// if (val != MANUFACTURER_ID)
+	// {
+	// 	return false;
+	// }
 
-	UARTprintf("Manufacturer ID Correct: %c%c\n", val & 0x00FF, (val >> 8) & 0x00FF);
+	// UARTprintf("Manufacturer ID Correct: %c%c\n", val & 0x00FF, (val >> 8) & 0x00FF);
 
-	// Check device ID
-	readI2C(MLX90615_I2C_ADDRESS, ID_NUMBER_2, (uint8_t *)&val);
-	val = (val << 8) | (val>>8 &0xFF);
+	// // Check device ID
+	// readI2C(MLX90615_I2C_ADDRESS, ID_NUMBER_2, (uint8_t *)&val);
+	// val = (val << 8) | (val>>8 &0xFF);
 
-	if (val != DEVICE_ID)
-	{
-		return (false);
-	}
+	// if (val != DEVICE_ID)
+	// {
+	// 	return (false);
+	// }
 
-	UARTprintf("Device ID Correct: %c%c\n", val & 0x00FF, (val >> 8) & 0x00FF);
+	// UARTprintf("Device ID Correct: %c%c\n", val & 0x00FF, (val >> 8) & 0x00FF);
 
-	return (true);
+	// return (true);
 }
 
 /**************************************************************************************************
