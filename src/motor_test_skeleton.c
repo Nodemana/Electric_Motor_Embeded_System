@@ -73,7 +73,8 @@
 
 #include "motorlib.h"
 
-
+#define TICKS_PER_REVOLUTION 12
+#define TICKS_PER_SECOND 10000.0
 /*-----------------------------------------------------------*/
 
 volatile uint32_t g_ui32TimeStamp = 0;
@@ -90,6 +91,7 @@ uint32_t revolutions_per_second;
  * The tasks as described in the comments at the top of this file.
  */
 static void prvMotorTask( void *pvParameters );
+static void prvSpeedSenseTask( void *pvParameters );
 
 /*
  * PID Controller
@@ -126,6 +128,13 @@ void vCreateMotorTask( void )
                  tskIDLE_PRIORITY + 1,
                  NULL );
 
+    xTaskCreate( prvSpeedSenseTask,
+                 "Speed",
+                 configMINIMAL_STACK_SIZE,
+                 NULL,
+                 tskIDLE_PRIORITY + 1,
+                 NULL );
+
 }
 /*-----------------------------------------------------------*/
 
@@ -137,10 +146,9 @@ static void prvMotorTask( void *pvParameters )
     int32_t motor_error;
 
 
-    bool success = false;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
-    success = initMotorLib(period_value);
+    initMotorLib(period_value);
     /* Set at >10% to get it to start */
     setDuty(duty_value);
 
@@ -165,7 +173,6 @@ static void prvMotorTask( void *pvParameters )
     updateMotor(g_Hall_A, g_Hall_B, g_Hall_C);
 
     enableMotor();
-    previous_g_ui32TimeStamp = xTaskGetTickCount();
     for (;;)
     {
         motor_error = desired_duty - duty_value;
@@ -180,16 +187,27 @@ static void prvMotorTask( void *pvParameters )
         // }
         
         setDuty(duty_value);
-        if( xSemaphoreTake(xSpeedSemaphore, 0) == pdPASS) {
-            UARTprintf("Ticks per Revolution: %d\n", one_revolution_ticks);
-            UARTprintf("RPS: %d\n\n", revolutions_per_second);
-        }
+        
         //vTaskDelay(pdMS_TO_TICKS( 250 ));
         // duty_value++;
 
     }
 }
 
+static void prvSpeedSenseTask( void *pvParameters )
+{
+    previous_g_ui32TimeStamp = xTaskGetTickCount();
+    for(;;)
+    {
+        if( xSemaphoreTake(xSpeedSemaphore, 0) == pdPASS) {
+            float time_in_seconds = time_difference / TICKS_PER_SECOND;
+            float revolutions_per_second_float = 1.0 / (time_in_seconds / TICKS_PER_REVOLUTION);
+            revolutions_per_second = (uint32_t)(revolutions_per_second_float * 10.0);
+            //UARTprintf("Ticks per Revolution: %d\n", one_revolution_ticks);
+            UARTprintf("RPS: %d\n\n", revolutions_per_second);
+        }
+    }
+}
 /*-----------------------------------------------------------*/
 
 
@@ -221,13 +239,14 @@ void HallSensorHandler(void)
     GPIOIntClear(GPIO_PORTN_BASE, GPIO_PIN_2);
 
     // Could also add speed sensing code here too.
+
+
     g_ui32TimeStamp = xTaskGetTickCount();
     time_difference = g_ui32TimeStamp - previous_g_ui32TimeStamp;
-    one_revolution_ticks = time_difference * 12;
-    revolutions_per_second = ((float)1/((float)one_revolution_ticks/(float)10000.0))*(uint32_t)10;
-            
-            //UARTprintf("Ticks = %d\n", g_ui32TimeStamp);
     previous_g_ui32TimeStamp = g_ui32TimeStamp;
+    
+
+    
     xSemaphoreGiveFromISR( xSpeedSemaphore, &xMotorTaskWoken);
     portYIELD_FROM_ISR( &xMotorTaskWoken );  
     //UARTprintf("Ticks = %d", g_ui32TimeStamp);
