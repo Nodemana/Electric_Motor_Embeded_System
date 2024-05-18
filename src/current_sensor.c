@@ -143,7 +143,7 @@ void vCreateCurrentSensorTask( void )
 //  - Estimate current using hall effect sensor data, current phase voltage and the state diagram from https://canvas.qut.edu.au/courses/17133/pages/egh456-assessment-2-design-of-embedded-system-for-electric-vehicle-group-project-details?module_item_id=1511474
 //  - Create buffer with window size of at least 5
 //  - Create filter 
-//  - Run at 150Hz or higher (task is always running but the ADC interrupts are only done at 150Hz?)
+//  - Run at 150Hz or higher (task is always running but the ADC interrupts are only done at 150Hz? Maybe dont even use a task? just fire an event when new measurements are read?)
 //  - Provide functions and data to be accessible for the UI
 static void prvCurrentSensorTask( void *pvParameters) {
     uint32_t ui32Value;
