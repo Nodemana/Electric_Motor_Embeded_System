@@ -75,8 +75,13 @@
 
 #include "motorlib.h"
 
-#define TICKS_PER_REVOLUTION 12
-#define TICKS_PER_SECOND 10000.0
+enum states {
+  IDLE,
+  STARTING,
+  RUNNING,
+  E_STOPPING,
+} motor_control_state;
+
 /*-----------------------------------------------------------*/
 
 //volatile uint32_t g_ui32TimeStamp = 0;
@@ -92,6 +97,11 @@ volatile uint32_t hall_state_counter = 0;
 uint32_t revolutions_per_second;
 uint32_t revolutions_per_minute;
 uint32_t acceleration_RPM_per_second = 0;
+
+motor_control_state = IDLE;
+
+
+
 
 
 /*
@@ -119,6 +129,7 @@ void vCreateMotorTask( void );
 
 void vCreateMotorTask( void )
 {
+
     /* Create the task as described in the comments at the top of this file.
      *
      * The xTaskCreate parameters in order are:
@@ -154,13 +165,12 @@ static void prvMotorTask( void *pvParameters )
     int32_t motor_error;
 
 
-
+    
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
     /* Set at >10% to get it to start */
     setDuty(duty_value);
 
-    //UARTprintf("\n Success: %d", success);
     /* Kick start the motor */
 
     //1. Read hall effect sensors
@@ -183,21 +193,18 @@ static void prvMotorTask( void *pvParameters )
     enableMotor();
     for (;;)
     {
-        motor_error = desired_duty - duty_value;
-        //UARTprintf("Motor Error: %d\n", motor_error);
-        //UARTprintf("Duty Value: %d\n\n", duty_value);
-        // Update duty_value
-        duty_value = PID(motor_error, duty_value);
+        switch (motor_control_state) {
+            case IDLE:
+            case STARTING:
+            case RUNNING:
 
-        // if(duty_value>=period_value){
-        //     stopMotor(1);
-        //     continue;
-        // }
-        
-        setDuty(duty_value);
-        
-        //vTaskDelay(pdMS_TO_TICKS( 250 ));
-        // duty_value++;
+                motor_error = desired_duty - duty_value;
+                duty_value = PID(motor_error, duty_value);
+
+                setDuty(duty_value);
+
+            case E_STOPPING:
+        }
 
     }
 }
