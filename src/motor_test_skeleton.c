@@ -70,6 +70,11 @@
 #include "driverlib/gpio.h"
 #include "driverlib/pwm.h"
 #include "semphr.h"
+#include "driverlib/timer.h"
+#include "driverlib/rom_map.h"
+
+
+
 
 #include "motorlib.h"
 
@@ -77,14 +82,16 @@
 #define TICKS_PER_SECOND 10000.0
 /*-----------------------------------------------------------*/
 
-volatile uint32_t g_ui32TimeStamp = 0;
-uint32_t previous_g_ui32TimeStamp = 0;
+//volatile uint32_t g_ui32TimeStamp = 0;
+//uint32_t previous_g_ui32TimeStamp = 0;
 extern SemaphoreHandle_t xSpeedSemaphore;
-int32_t g_Hall_A;
-int32_t g_Hall_B;
-int32_t g_Hall_C;
-uint32_t time_difference;
-uint32_t one_revolution_ticks;
+int32_t Hall_A;
+int32_t Hall_B;
+int32_t Hall_C;
+
+uint32_t hall_state_counter = 0;
+//uint32_t time_difference;
+//uint32_t one_revolution_ticks;
 uint32_t revolutions_per_second;
 
 /*
@@ -97,6 +104,7 @@ static void prvSpeedSenseTask( void *pvParameters );
  * PID Controller
  */
 uint16_t PID(int32_t error, uint16_t current_duty_cycle);
+void Config_Timers(void);
 
 /*
  * Called by main() to create the Hello print task.
@@ -157,20 +165,20 @@ static void prvMotorTask( void *pvParameters )
 
     //1. Read hall effect sensors
     // Do an initial read of the hall effect sensor GPIO lines
-    g_Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
+    Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
 
    // UARTprintf("\nHall A: %d", Hall_A);
 
-    g_Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
+    Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
    // UARTprintf("\nHall B: %d", Hall_B);
 
-    g_Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
+    Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
    // UARTprintf("\nHall C: %d\n", Hall_C);
 
     // give the read hall effect sensor lines to updateMotor() to move the motor
-    updateMotor(g_Hall_A, g_Hall_B, g_Hall_C);
+    updateMotor(Hall_A, Hall_B, Hall_C);
 
     enableMotor();
     for (;;)
@@ -196,14 +204,18 @@ static void prvMotorTask( void *pvParameters )
 
 static void prvSpeedSenseTask( void *pvParameters )
 {
-    previous_g_ui32TimeStamp = xTaskGetTickCount();
+    //previous_g_ui32TimeStamp = xTaskGetTickCount();
     for(;;)
     {
-        if( xSemaphoreTake(xSpeedSemaphore, 0) == pdPASS) {
-            float time_in_seconds = time_difference / TICKS_PER_SECOND;
-            float revolutions_per_second_float = 1.0 / (time_in_seconds / TICKS_PER_REVOLUTION);
-            revolutions_per_second = (uint32_t)(revolutions_per_second_float * 10.0);
+        if( xSemaphoreTake(xSpeedSemaphore, portMAX_DELAY) == pdPASS) {
+            //float time_in_seconds = time_difference / TICKS_PER_SECOND;
+            //float revolutions_per_second_float = 1.0 / (time_in_seconds / TICKS_PER_REVOLUTION);
+            //revolutions_per_second = (uint32_t)(revolutions_per_second_float);
             //UARTprintf("Ticks per Revolution: %d\n", one_revolution_ticks);
+            
+            
+            revolutions_per_second = hall_state_counter/12;
+            hall_state_counter = 0;
             UARTprintf("RPS: %d\n\n", revolutions_per_second);
         }
     }
@@ -215,41 +227,32 @@ static void prvSpeedSenseTask( void *pvParameters )
 
 void HallSensorHandler(void)
 {
-    int32_t Hall_A;
-    int32_t Hall_B;
-    int32_t Hall_C;
-    BaseType_t xMotorTaskWoken;
-
-
     //1. Read hall effect sensors
-    g_Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
+    Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
     // Shift right by the pin number to get the logical value (0 or 1)
 
-    g_Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
+    Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
 
-    g_Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
+    Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
     //2. call update motor to change to next phase
-    updateMotor(g_Hall_A, g_Hall_B, g_Hall_C);
+    updateMotor(Hall_A, Hall_B, Hall_C);
     
     //3. Clear interrupt
     GPIOIntClear(GPIO_PORTM_BASE, GPIO_PIN_3);
     GPIOIntClear(GPIO_PORTH_BASE, GPIO_PIN_2);
     GPIOIntClear(GPIO_PORTN_BASE, GPIO_PIN_2);
 
+    //Increment State Counter:
+    hall_state_counter++;
+
     // Could also add speed sensing code here too.
 
 
-    g_ui32TimeStamp = xTaskGetTickCount();
-    time_difference = g_ui32TimeStamp - previous_g_ui32TimeStamp;
-    previous_g_ui32TimeStamp = g_ui32TimeStamp;
-    
-
-    
-    xSemaphoreGiveFromISR( xSpeedSemaphore, &xMotorTaskWoken);
-    portYIELD_FROM_ISR( &xMotorTaskWoken );  
-    //UARTprintf("Ticks = %d", g_ui32TimeStamp);
+    //g_ui32TimeStamp = xTaskGetTickCount();
+    //time_difference = g_ui32TimeStamp - previous_g_ui32TimeStamp;
+    //previous_g_ui32TimeStamp = g_ui32TimeStamp;
 }
 
 
@@ -261,4 +264,17 @@ uint16_t PID(int32_t error, uint16_t current_duty_cycle)
 {
     float gain = 0.2;
     return current_duty_cycle + (gain * error);
+}
+
+void SpeedTimerISR(void) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    // Clear the timer interrupt.
+    MAP_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+
+    // Give the semaphore to unblock the task.
+    xSemaphoreGiveFromISR(xSpeedSemaphore, &xHigherPriorityTaskWoken);
+    UARTprintf("1s");
+    // Perform a context switch if needed.
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }

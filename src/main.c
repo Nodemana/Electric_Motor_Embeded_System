@@ -71,6 +71,7 @@
 #include "utils/uartstdio.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pwm.h"
+#include "driverlib/timer.h"
 
 // Motor lib
 #include <motorlib.h>
@@ -96,6 +97,8 @@ extern void vCreateMotorTask( void );
 extern void vCreateCurrentSensorTask( void );
 
 static void prvConfigureHallInts( void );
+
+void Config_Timers(void);
 
 /*-----------------------------------------------------------*/
 
@@ -177,6 +180,8 @@ static void prvSetupHardware(void)
     MAP_GPIODirModeSet(GPIO_PORTN_BASE, GPIO_PIN_2, GPIO_DIR_MODE_IN);
     MAP_GPIOPadConfigSet(GPIO_PORTN_BASE, GPIO_PIN_2, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
 
+    Config_Timers();
+
     /* Set-up interrupts for hall sensors */
     prvConfigureHallInts();
 
@@ -223,6 +228,30 @@ static void prvConfigureHallInts( void )
     /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
 }
+
+void Config_Timers(void) {
+    // Enable the peripherals used by this example.
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+
+    //
+    // Enable processor interrupts.
+    //
+    MAP_IntMasterEnable();
+
+    // Configure the 32-bit periodic timer.
+    MAP_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+    
+    // Set the timer to trigger every one second (assuming g_ui32SysClock is the system clock in Hz)
+    MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, g_ui32SysClock - 1);
+
+    // Setup the interrupts for the timer timeouts.
+    MAP_IntEnable(INT_TIMER0A);
+    MAP_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+
+    // Enable the timer.
+    MAP_TimerEnable(TIMER0_BASE, TIMER_A);
+}
+
 
 /*-----------------------------------------------------------*/
 
