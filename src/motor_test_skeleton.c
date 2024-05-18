@@ -73,6 +73,9 @@
 #include "driverlib/timer.h"
 #include "driverlib/rom_map.h"
 
+#include "inc/hw_types.h"
+
+uint32_t g_ui32Flags;
 
 
 
@@ -89,10 +92,13 @@ int32_t Hall_A;
 int32_t Hall_B;
 int32_t Hall_C;
 
-uint32_t hall_state_counter = 0;
+volatile uint32_t hall_state_counter = 0;
 //uint32_t time_difference;
 //uint32_t one_revolution_ticks;
 uint32_t revolutions_per_second;
+uint32_t revolutions_per_minute;
+uint32_t acceleration_RPM_per_second = 0;
+
 
 /*
  * The tasks as described in the comments at the top of this file.
@@ -140,7 +146,7 @@ void vCreateMotorTask( void )
                  "Speed",
                  configMINIMAL_STACK_SIZE,
                  NULL,
-                 tskIDLE_PRIORITY + 1,
+                 tskIDLE_PRIORITY + 2,
                  NULL );
 
 }
@@ -204,19 +210,25 @@ static void prvMotorTask( void *pvParameters )
 
 static void prvSpeedSenseTask( void *pvParameters )
 {
+    uint32_t last_revolutions_per_minute = 0;
     //previous_g_ui32TimeStamp = xTaskGetTickCount();
     for(;;)
     {
         if( xSemaphoreTake(xSpeedSemaphore, portMAX_DELAY) == pdPASS) {
-            //float time_in_seconds = time_difference / TICKS_PER_SECOND;
-            //float revolutions_per_second_float = 1.0 / (time_in_seconds / TICKS_PER_REVOLUTION);
-            //revolutions_per_second = (uint32_t)(revolutions_per_second_float);
-            //UARTprintf("Ticks per Revolution: %d\n", one_revolution_ticks);
+          
+            revolutions_per_second = (hall_state_counter * 4)/12; // Timer runs at 1/4 of a second. 12 Hall states in one revolution.
             
+            revolutions_per_minute = revolutions_per_second * 60;
+
+            acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
             
-            revolutions_per_second = hall_state_counter/12;
+            //UARTprintf("Hall States: %d\n", hall_state_counter);
             hall_state_counter = 0;
-            UARTprintf("RPS: %d\n\n", revolutions_per_second);
+            UARTprintf("RPS: %d\n", revolutions_per_second);
+            UARTprintf("RPM: %d\n", revolutions_per_minute);
+            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+
+            last_revolutions_per_minute = revolutions_per_minute;
         }
     }
 }
@@ -246,13 +258,6 @@ void HallSensorHandler(void)
 
     //Increment State Counter:
     hall_state_counter++;
-
-    // Could also add speed sensing code here too.
-
-
-    //g_ui32TimeStamp = xTaskGetTickCount();
-    //time_difference = g_ui32TimeStamp - previous_g_ui32TimeStamp;
-    //previous_g_ui32TimeStamp = g_ui32TimeStamp;
 }
 
 
@@ -269,12 +274,10 @@ uint16_t PID(int32_t error, uint16_t current_duty_cycle)
 void SpeedTimerISR(void) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-    // Clear the timer interrupt.
-    MAP_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-
     // Give the semaphore to unblock the task.
     xSemaphoreGiveFromISR(xSpeedSemaphore, &xHigherPriorityTaskWoken);
-    UARTprintf("1s");
     // Perform a context switch if needed.
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    // Clear the timer interrupt.
+    TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
 }

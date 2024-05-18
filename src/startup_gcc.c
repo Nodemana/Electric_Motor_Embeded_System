@@ -50,6 +50,9 @@ extern void ADC1_SEQ2_ISR(void);
 extern void ADC1_SEQ3_ISR(void);
 extern void SpeedTimerISR(void);
 
+extern void Timer0IntHandler(void);
+extern void Timer1IntHandler(void);
+
 //*****************************************************************************
 //
 // The entry point for the application.
@@ -109,9 +112,9 @@ void (* const g_pfnVectors[])(void) =
     ADC1_SEQ2_ISR,                      // ADC Sequence 2
     ADC1_SEQ3_ISR,                      // ADC Sequence 3
     IntDefaultHandler,                      // Watchdog timer
-    SpeedTimerISR,                      // Timer 0 subtimer A
+    IntDefaultHandler,                      // Timer 0 subtimer A THIS TIMER DOESNT WORK FOR SOME REASON
     IntDefaultHandler,                      // Timer 0 subtimer B
-    IntDefaultHandler,                      // Timer 1 subtimer A
+    SpeedTimerISR,                      // Timer 1 subtimer A
     IntDefaultHandler,                      // Timer 1 subtimer B
     IntDefaultHandler,                      // Timer 2 subtimer A
     IntDefaultHandler,                      // Timer 2 subtimer B
