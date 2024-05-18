@@ -73,12 +73,6 @@
 #include "driverlib/timer.h"
 #include "driverlib/rom_map.h"
 
-#include "inc/hw_types.h"
-
-uint32_t g_ui32Flags;
-
-
-
 #include "motorlib.h"
 
 #define TICKS_PER_REVOLUTION 12
@@ -211,7 +205,6 @@ static void prvMotorTask( void *pvParameters )
 static void prvSpeedSenseTask( void *pvParameters )
 {
     uint32_t last_revolutions_per_minute = 0;
-    //previous_g_ui32TimeStamp = xTaskGetTickCount();
     for(;;)
     {
         if( xSemaphoreTake(xSpeedSemaphore, portMAX_DELAY) == pdPASS) {
@@ -232,6 +225,17 @@ static void prvSpeedSenseTask( void *pvParameters )
         }
     }
 }
+
+/*
+ * PID Controller
+ */
+
+uint16_t PID(int32_t error, uint16_t current_duty_cycle)
+{
+    float gain = 0.2;
+    return current_duty_cycle + (gain * error);
+}
+
 /*-----------------------------------------------------------*/
 
 
@@ -260,17 +264,9 @@ void HallSensorHandler(void)
     hall_state_counter++;
 }
 
-
 /*
- * PID Controller
- */
-
-uint16_t PID(int32_t error, uint16_t current_duty_cycle)
-{
-    float gain = 0.2;
-    return current_duty_cycle + (gain * error);
-}
-
+ Timer ISR
+*/
 void SpeedTimerISR(void) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
