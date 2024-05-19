@@ -244,7 +244,7 @@ void Config_Timers(void) {
     // Configure the two 32-bit periodic timers.
     //
     TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
-    TimerLoadSet(TIMER1_BASE, TIMER_A, g_ui32SysClock/4); // 250 ms
+    TimerLoadSet(TIMER1_BASE, TIMER_A, g_ui32SysClock/8); // 125 ms
 
     //
     // Setup the interrupts for the timer timeouts.

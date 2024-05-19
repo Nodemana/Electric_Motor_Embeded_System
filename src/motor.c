@@ -75,8 +75,7 @@
 
 #include "motorlib.h"
 
-#define TICKS_PER_REVOLUTION 12
-#define TICKS_PER_SECOND 10000.0
+#define SPEED_FILTER_SIZE 10
 /*-----------------------------------------------------------*/
 
 //volatile uint32_t g_ui32TimeStamp = 0;
@@ -105,6 +104,9 @@ static void prvSpeedSenseTask( void *pvParameters );
  */
 uint16_t PID(int32_t error, uint16_t current_duty_cycle);
 void Config_Timers(void);
+uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size);
+uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t filter_current_size, uint32_t max_filter_size);
+void ShuffleData(uint32_t *data, uint32_t size);
 
 /*
  * Called by main() to create the Hello print task.
@@ -205,26 +207,62 @@ static void prvMotorTask( void *pvParameters )
 static void prvSpeedSenseTask( void *pvParameters )
 {
     uint32_t last_revolutions_per_minute = 0;
+    uint32_t revolutions_per_minute_filter[10];
+    uint32_t filter_current_size = 0;
     for(;;)
     {
         if( xSemaphoreTake(xSpeedSemaphore, portMAX_DELAY) == pdPASS) {
           
-            revolutions_per_second = (hall_state_counter * 4)/12; // Timer runs at 1/4 of a second. 12 Hall states in one revolution.
+            revolutions_per_second = (hall_state_counter * 8)/12; // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
             
             revolutions_per_minute = revolutions_per_second * 60;
 
+            uint32_t filtered_revoltutions_per_minute = FilterData(revolutions_per_minute, revolutions_per_minute_filter, filter_current_size, SPEED_FILTER_SIZE);
+            if (filter_current_size != SPEED_FILTER_SIZE){
+                filter_current_size += 1;
+            }
             acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
-            
             //UARTprintf("Hall States: %d\n", hall_state_counter);
             hall_state_counter = 0;
             UARTprintf("RPS: %d\n", revolutions_per_second);
             UARTprintf("RPM: %d\n", revolutions_per_minute);
+            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
             UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
         }
     }
 }
+
+void ShuffleData(uint32_t *data, uint32_t size) {
+    // Shift all elements to the left by one position
+    for (uint32_t i = 0; i < size - 1; ++i) {
+        data[i] = data[i + 1];
+    }
+}
+
+uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t filter_current_size, uint32_t max_filter_size) {
+    if (filter_current_size < max_filter_size) {
+        // Buffer is not full, simply add the new data
+        filter_pointer[filter_current_size] = newData;
+        //UARTprintf("Added Data: %d\n",  filter_pointer[filter_current_size]);
+    } else {
+        // Buffer is full, shuffle data and insert newData
+        ShuffleData(filter_pointer, max_filter_size);
+        filter_pointer[max_filter_size - 1] = newData;//
+        //UARTprintf("Added Data: %d\n", filter_pointer[max_filter_size - 1]);
+    }
+    return GetAverage(filter_pointer, filter_current_size);
+}
+
+uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size) {
+    uint32_t sum = 0;
+    for (uint32_t i = 0; i < size; ++i) {
+        sum += filter_pointer[i];
+    }
+    return sum / size;
+}
+
 
 /*
  * PID Controller
