@@ -143,7 +143,7 @@ bool sensorMLX90615Read(uint16_t *rawData)
 {
 	uint16_t val;
 
-	if (TempReadI2C(MLX90615_I2C_ADDRESS, READ_RAW_AMBIENT_TEMP, (uint8_t *)&val))
+	if (TempReadI2C(MLX90615_I2C_ADDRESS, READ_RAW_OBJECT_TEMP, (uint8_t *)&val))
 	{
 		// Swap bytes
 		*rawData = val;

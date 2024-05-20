@@ -98,7 +98,7 @@ static void prvReadTempSensor(void *pvParameters)
     {
 
         count++;
-        SysCtlDelay(g_ui32SysClock/10);
+        SysCtlDelay(g_ui32SysClock);
         // count++;
         // Read and convert light value from OPT3001 sensor
 
@@ -121,59 +121,5 @@ static void prvReadTempSensor(void *pvParameters)
 /*-----------------------------------------------------------*/
 void prvConfigureMLX90615(void)
 {
-    // Define worked flag
-    // bool worked;
-
-    //
-    // Clear the terminal and print the welcome message.
-    //
-    UARTprintf("\033[2J\033[H");
-    UARTprintf("MLX90615 Example\n");
-
-    // //
-    // // The I2C0 peripheral must be enabled before use.
-    // //
-    // SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
-    // SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
-
-    // //
-    // // Configure the pin muxing for I2C0 functions on port B2 and B3.
-    // // This step is not necessary if your part does not support pin muxing.
-    // //
-    // GPIOPinConfigure(GPIO_PN5_I2C2SCL);
-    // GPIOPinConfigure(GPIO_PN4_I2C2SDA);
-
-    // //
-    // // Select the I2C function for these pins.  This function will also
-    // // configure the GPIO pins pins for I2C operation, setting them to
-    // // open-drain operation with weak pull-ups.  Consult the data sheet
-    // // to see which functions are allocated per pin.
-    // //
-    // GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
-    // GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
-    // I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
-
-    //
-    // Enable interrupts to the processor.
-    //
-    // IntMasterEnable();
-
-    // IntEnable(INT_I2C0);
-
-    // // Test that sensor is set up correctly
-    // UARTprintf("\nTesting OPT3001 Sensor:\n");
-    // worked = sensorOpt3001Test();
-
-    // while (!worked)
-    // {
-    //     SysCtlDelay(g_ui32SysClock);
-    //     UARTprintf("\nTest Failed, Trying again\n");
-    //     worked = sensorOpt3001Test();
-    // }
-
-    UARTprintf("All Tests Passed!\n\n");
-
-    // Initialize opt3001 sensor
-    // sensorOpt3001Init();
-    // sensorOpt3001Enable(true);
+    UARTprintf("Test!\n\n");
 }

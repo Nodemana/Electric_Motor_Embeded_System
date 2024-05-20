@@ -2,6 +2,7 @@
     "files.associations": {
         "i2c.h": "c",
         "mlx90615.h": "c",
-        "i2ctmpdriver.h": "c"
+        "i2ctmpdriver.h": "c",
+        "hw_memmap.h": "c"
     }
 }

@@ -66,10 +66,12 @@ bool TempReadI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
 
     // Load device slave address
     I2CMasterSlaveAddrSet(I2C2_BASE, ui8Addr, false);
+
     // Place the character to be sent in the data register
-    
     I2CMasterDataPut(I2C2_BASE, ui8Reg);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+
+    // Wait untill transmission completes
     while (I2CMasterBusy(I2C2_BASE))
     {
     }
