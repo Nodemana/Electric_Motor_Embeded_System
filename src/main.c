@@ -100,6 +100,11 @@ extern void vDISPTask(void);
 
 static void prvConfigureHallInts(void);
 
+/*
+ * Handles when Timer0A ends.
+ */
+void xTimerHandler(void);
+
 /*-----------------------------------------------------------*/
 
 int main(void)
@@ -110,7 +115,7 @@ int main(void)
     /* Create the Hello task to output a message over UART. */
     vCreateMotorTask();
 
-    vDISPTask();
+    // vDISPTask();
 
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
@@ -160,7 +165,7 @@ static void prvConfigureHWTimer(void)
     TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
 
     /* Set the Timer 0A load value to run at 10 Hz. */
-    TimerLoadSet(TIMER0_BASE, TIMER_A, configCPU_CLOCK_HZ);
+    TimerLoadSet(TIMER0_BASE, TIMER_A, configCPU_CLOCK_HZ / 10);
 
     /* Configure the Timer 0A interrupt for timeout. */
     TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
@@ -169,7 +174,7 @@ static void prvConfigureHWTimer(void)
     IntEnable(INT_TIMER0A);
 
     // /* Enable global interrupts in the NVIC. */
-    IntMasterEnable();
+    // IntMasterEnable();
 }
 
 /*-----------------------------------------------------------*/
@@ -208,6 +213,14 @@ static void prvSetupHardware(void)
     prvConfigureHallInts();
 }
 /*-----------------------------------------------------------*/
+
+// Timer handler
+void xTimer0AHandler(void)
+{
+    UARTprintf("Interrupt");
+    /* Clear the hardware interrupt flag for Timer 0A. */
+    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+}
 
 void vApplicationMallocFailedHook(void)
 {

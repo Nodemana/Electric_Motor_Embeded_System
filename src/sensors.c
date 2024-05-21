@@ -37,10 +37,10 @@
 
 
 
-// Timer handler
-void xTimer0AHandler(void)
-{
-    /* Clear the hardware interrupt flag for Timer 0A. */
-    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-    UARTprintf("Interrupt");
-}
+// // Timer handler
+// void xTimer0AHandler(void)
+// {
+//     /* Clear the hardware interrupt flag for Timer 0A. */
+//     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+//     UARTprintf("Interrupt");
+// }
