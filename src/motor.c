@@ -76,7 +76,22 @@
 #include "motorlib.h"
 
 #define SPEED_FILTER_SIZE 10
+#define speedQUEUE_LENGTH                    ( 10 )
+
+struct Message
+{
+    uint32_t payload;
+    uint32_t timestamp;
+} xMessage;
+
+
+
 /*-----------------------------------------------------------*/
+
+/*
+ * Queue used to send and receive complete struct Message structures.
+ */
+QueueHandle_t xSpeedQueue = NULL;
 
 //volatile uint32_t g_ui32TimeStamp = 0;
 //uint32_t previous_g_ui32TimeStamp = 0;
@@ -121,6 +136,14 @@ void vCreateMotorTask( void );
 
 void vCreateMotorTask( void )
 {
+
+    xSpeedQueue = xQueueCreate(
+                          /* The number of items the queue can hold. */
+                          speedQUEUE_LENGTH,
+                          /* Size of each item is big enough to hold the
+                          whole structure. */
+                          sizeof( xMessage ) );
+
     /* Create the task as described in the comments at the top of this file.
      *
      * The xTaskCreate parameters in order are:
@@ -206,6 +229,8 @@ static void prvMotorTask( void *pvParameters )
 
 static void prvSpeedSenseTask( void *pvParameters )
 {
+    struct Message xMessage;
+
     uint32_t last_revolutions_per_minute = 0;
     uint32_t revolutions_per_minute_filter[10];
     uint32_t filter_current_size = 0;
@@ -230,6 +255,23 @@ static void prvSpeedSenseTask( void *pvParameters )
             UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
+
+            //Message Construction
+            xMessage.payload = revolutions_per_minute;
+            xMessage.timestamp = xTaskGetTickCount();
+
+
+            /* Send the entire structure by value to the queue. */
+            xQueueSend(xSpeedQueue,
+                   /* The address of the xMessage variable.
+                    * sizeof( struct AMessage ) bytes are copied from here into
+                    * the queue. */
+                   ( void * ) &xMessage,
+                   /* Block time of 0 says don't block if the queue is already
+                    * full.  Check the value returned by xQueueSend() to know
+                    * if the message was sent to the queue successfully. */
+                   ( TickType_t ) 0 );
+
         }
     }
 }
