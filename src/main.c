@@ -95,6 +95,9 @@ static void prvConfigureHWTimer(void);
 /* API to trigger the 'Hello world' task. */
 extern void vCreateMotorTask(void);
 
+/* Software Timer */
+extern void vSoftwareTimer( void );
+
 /* API to trigger the DISP task. */
 extern void vDISPTask(void);
 
@@ -115,6 +118,8 @@ int main(void)
     /* Create the Hello task to output a message over UART. */
     vCreateMotorTask();
 
+    vSoftwareTimer();
+    
     vDISPTask();
 
     /* Start the tasks and timer running. */
