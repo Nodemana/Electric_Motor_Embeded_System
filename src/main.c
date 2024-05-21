@@ -115,7 +115,7 @@ int main(void)
     /* Create the Hello task to output a message over UART. */
     vCreateMotorTask();
 
-    // vDISPTask();
+    vDISPTask();
 
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
@@ -213,14 +213,6 @@ static void prvSetupHardware(void)
     prvConfigureHallInts();
 }
 /*-----------------------------------------------------------*/
-
-// Timer handler
-void xTimer0AHandler(void)
-{
-    UARTprintf("Interrupt");
-    /* Clear the hardware interrupt flag for Timer 0A. */
-    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-}
 
 void vApplicationMallocFailedHook(void)
 {
