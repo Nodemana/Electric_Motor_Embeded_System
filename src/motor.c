@@ -98,7 +98,7 @@ uint32_t revolutions_per_second;
 uint32_t revolutions_per_minute;
 uint32_t acceleration_RPM_per_second = 0;
 
-motor_control_state = IDLE;
+enum states motor_control_state = IDLE;
 
 
 
@@ -195,7 +195,15 @@ static void prvMotorTask( void *pvParameters )
     {
         switch (motor_control_state) {
             case IDLE:
+                motor_control_state = STARTING;
             case STARTING:
+                    motor_error = desired_duty - duty_value;
+                    duty_value = PID(motor_error, duty_value);
+
+                    setDuty(duty_value);
+                    if(motor_error == 0){
+                        motor_control_state = RUNNING;
+                    };
             case RUNNING:
 
                 motor_error = desired_duty - duty_value;
@@ -204,6 +212,11 @@ static void prvMotorTask( void *pvParameters )
                 setDuty(duty_value);
 
             case E_STOPPING:
+                desired_duty = 0;
+                motor_error = desired_duty - duty_value;
+                duty_value = PID(motor_error, duty_value);
+
+                setDuty(duty_value);
         }
 
     }
