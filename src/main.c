@@ -69,6 +69,9 @@
 #include "utils/uartstdio.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pwm.h"
+#include "driverlib/timer.h"
+#include "inc/hw_types.h"
+#include "driverlib/debug.h"
 
 // Motor lib
 #include <motorlib.h>
@@ -85,6 +88,9 @@ static void prvSetupHardware(void);
 /* This function sets up UART0 to be used for a console to display information
  * as the example is running. */
 static void prvConfigureUART(void);
+
+/* Timer configuration */
+static void prvConfigureHWTimer(void);
 
 /* API to trigger the 'Hello world' task. */
 extern void vCreateMotorTask(void);
@@ -145,6 +151,29 @@ static void prvConfigureUART(void)
 }
 /*-----------------------------------------------------------*/
 
+static void prvConfigureHWTimer(void)
+{
+    /* The Timer 0 peripheral must be enabled for use. */
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+
+    /* Configure Timer 0 in full-width periodic mode. */
+    TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+
+    /* Set the Timer 0A load value to run at 10 Hz. */
+    TimerLoadSet(TIMER0_BASE, TIMER_A, configCPU_CLOCK_HZ / 10);
+
+    /* Configure the Timer 0A interrupt for timeout. */
+    TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+
+    /* Enable the Timer 0A interrupt in the NVIC. */
+    IntEnable(INT_TIMER0A);
+
+    // /* Enable global interrupts in the NVIC. */
+    IntMasterEnable();
+}
+
+/*-----------------------------------------------------------*/
+
 static void prvSetupHardware(void)
 {
     /* Run from the PLL at configCPU_CLOCK_HZ MHz. */
@@ -159,6 +188,9 @@ static void prvSetupHardware(void)
     /* Configure UART0 to send messages to terminal. */
     prvConfigureUART();
 
+    /* Configure the hardware timer to run in periodic mode. */
+    prvConfigureHWTimer();
+    
     // GPIOPinTypeGPIOInput(GPIO_PORTM_BASE, GPIO_PIN_3);
     // GPIOPinTypeGPIOInput(GPIO_PORTH_BASE, GPIO_PIN_2);
     // GPIOPinTypeGPIOInput(GPIO_PORTN_BASE, GPIO_PIN_2);
