@@ -735,12 +735,3 @@ static void prvDisplayTask(void *pvParameters)
         WidgetMessageQueueProcess();
     }
 }
-
-/*-----------------------------------------------------------*/
-// Timer handler
-void xTimer0AHandler(void)
-{
-    UARTprintf("Interrupt");
-    /* Clear the hardware interrupt flag for Timer 0A. */
-    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-}

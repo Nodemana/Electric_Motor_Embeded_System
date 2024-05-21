@@ -103,7 +103,7 @@ static void prvConfigureHallInts(void);
 /*
  * Handles when Timer0A ends.
  */
-void xTimerHandler(void);
+void xTimer0AHandler(void);
 
 /*-----------------------------------------------------------*/
 
@@ -174,7 +174,7 @@ static void prvConfigureHWTimer(void)
     IntEnable(INT_TIMER0A);
 
     // /* Enable global interrupts in the NVIC. */
-    // IntMasterEnable();
+    IntMasterEnable();
 }
 
 /*-----------------------------------------------------------*/
@@ -254,6 +254,16 @@ static void prvConfigureHallInts(void)
     /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
 }
+
+/*-----------------------------------------------------------*/
+// Timer handler
+void xTimer0AHandler(void)
+{
+    UARTprintf("Interrupt");
+    /* Clear the hardware interrupt flag for Timer 0A. */
+    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+}
+
 
 /*-----------------------------------------------------------*/
 
