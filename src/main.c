@@ -160,7 +160,7 @@ static void prvConfigureHWTimer(void)
     TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
 
     /* Set the Timer 0A load value to run at 10 Hz. */
-    TimerLoadSet(TIMER0_BASE, TIMER_A, configCPU_CLOCK_HZ / 10);
+    TimerLoadSet(TIMER0_BASE, TIMER_A, configCPU_CLOCK_HZ);
 
     /* Configure the Timer 0A interrupt for timeout. */
     TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
