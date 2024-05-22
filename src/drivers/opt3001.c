@@ -82,6 +82,14 @@
 /* Sensor data size */
 #define DATA_LENGTH                     2
 
+
+/* Slave address */
+#define MLX90615_I2C_ADDRESS            0x5B // Refer to SMBus slave address. it must be the LS 7 bytes (6-0)
+
+/* Commands */
+#define READ_RAW_OBJECT_TEMP			0x27 // OP Code: 0010 aaaa, where aaaa is 4 LSBits of the memory map address to be read / written. We want T_A = 0x07
+#define READ_RAW_AMBIENT_TEMP			0x26 // OP Code: 0010 aaaa, where aaaa is 4 LSBits of the memory map address to be read / written. We want T_O = 0x06
+
 /* ------------------------------------------------------------------------------------------------
  *                                           Local Functions
  * ------------------------------------------------------------------------------------------------
@@ -150,25 +158,26 @@ void sensorOpt3001Enable(bool enable)
 
 bool sensorOpt3001Read(uint16_t *rawData)
 {
-	bool data_ready;
+	bool data_ready = true;
 	uint16_t val;
 
-	// Get status of configuration register
-	if (readI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val))
-	{
-		data_ready = ((val>>8 &0xFF) & DATA_RDY_BIT) == DATA_RDY_BIT;
-	}
-	else
-	{
-		return false;
-	}
+	// // Get status of configuration register
+	// if (readI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val))
+	// {
+	// 	data_ready = ((val>>8 &0xFF) & DATA_RDY_BIT) == DATA_RDY_BIT;
+	// }
+	// else
+	// {
+	// 	return false;
+	// }
 
 	if (data_ready)
 	{
-		if (readI2C(OPT3001_I2C_ADDRESS, REG_RESULT, (uint8_t *)&val))
+		if (readI2C(MLX90615_I2C_ADDRESS, READ_RAW_OBJECT_TEMP, (uint8_t *)&val))
 		{
 			// Swap bytes
 			*rawData = (val << 8) | (val>>8 &0xFF);
+			UARTprintf("received: %d", rawData);
 		} 
 		else
 		{

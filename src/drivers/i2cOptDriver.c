@@ -81,10 +81,12 @@ bool readI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
     {
     }
     byteA = I2CMasterDataGet(I2C2_BASE);
+    UARTprintf("byteA = %d", byteA);
 
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
     SysCtlDelay(delay);
     byteB = I2CMasterDataGet(I2C2_BASE);
+    UARTprintf("byteB = %d", byteB);
 
     data[0] = byteA;
     data[1] = byteB;

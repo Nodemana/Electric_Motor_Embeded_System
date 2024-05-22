@@ -33,6 +33,9 @@
 
 // Include Sensor
 
+// Include Sensor
+#include "drivers/opt3001.h"
+
 // Include Event
 #include <event_groups.h>
 
@@ -103,7 +106,8 @@ static void prvReadTempSensor(void *pvParameters)
         // Read and convert light value from OPT3001 sensor
 
         //Read and convert OPT values
-        success = sensorMLX90615Read(&rawData);
+        // success = sensorMLX90615Read(&rawData);
+        success = sensorOpt3001Read(&rawData);
 
         if (success) {
             sensorMLX90615Convert(rawData, &convertedLux);

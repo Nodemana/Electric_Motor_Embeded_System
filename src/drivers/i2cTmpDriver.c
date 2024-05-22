@@ -62,24 +62,39 @@ bool TempWriteI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
 bool TempReadI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
 {
     uint16_t delay = 1000;
-    uint8_t byteA, byteB;
+    uint32_t byteA, byteB;
+
+    
+
+    // I2CMasterDataPut(I2C2_BASE, ( (ui8Addr << 1) | 0));
+    // I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    // Wait untill transmission completes
+    // while (I2CMasterBusy(I2C2_BASE))
+    // {
+    // }
 
     // Load device slave address
     I2CMasterSlaveAddrSet(I2C2_BASE, ui8Addr, false);
-
+    UARTprintf("Setting Address bus to: %d", (ui8Addr << 1) | false);
     // Place the character to be sent in the data register
     I2CMasterDataPut(I2C2_BASE, ui8Reg);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
-
     // Wait untill transmission completes
     while (I2CMasterBusy(I2C2_BASE))
     {
     }
 
+    // I2CMasterDataPut(I2C2_BASE, ( (ui8Addr << 1) | 1));
+    // I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    // Wait untill transmission completes
+    // SysCtlDelay(delay);
+    // while (I2CMasterBusy(I2C2_BASE))
+    // {
+    // }
+    // Read two bytes from I2C
+
     // Load device slave address
     I2CMasterSlaveAddrSet(I2C2_BASE, ui8Addr, true);
-
-    // Read two bytes from I2C
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
     while (I2CMasterBusy(I2C2_BASE))
     {
@@ -87,12 +102,16 @@ bool TempReadI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
     byteA = I2CMasterDataGet(I2C2_BASE);
     UARTprintf("reg = byteA: %d\n", byteA);
 
+    SysCtlDelay(delay);
+
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
     while (I2CMasterBusy(I2C2_BASE))
     {
     }
     byteB = I2CMasterDataGet(I2C2_BASE);
     UARTprintf("reg = byteB: %d\n", byteB);
+
+    SysCtlDelay(delay);
 
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
     SysCtlDelay(delay);
