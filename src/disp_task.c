@@ -1,3 +1,7 @@
+/* ------------------------------------------------------------------------------------------------
+ *                                           Includes
+ * -------------------------------------------------------------------------------------------------
+ */
 /* Standard includes. */
 #include <stdio.h>
 #include <stdint.h>
@@ -72,10 +76,54 @@
 // Inlcude que.h
 #include "que.h"
 
-/*-----------------------------------------------------------*/
+/* ------------------------------------------------------------------------------------------------
+ *                                           Definitions
+ * -------------------------------------------------------------------------------------------------
+ */
+#define NUM_SENSORS     4
+#define Y_AXIS_ORIGIN   40
+#define Y_AXIS_LENGTH   142
+#define X_AXIS_ORIGIN   10
+#define X_AXIS_LENGTH   223
+
+#define DRAW_LUX        (0)
+#define DRAW_TEMP       (1)
+#define DRAW_POWER      (2)
+#define DRAW_SPEED      (3)
+
+
+/* ------------------------------------------------------------------------------------------------
+ *                                      Extern Global Variables
+ * -------------------------------------------------------------------------------------------------
+ */
 // Include system clock
 extern uint32_t g_ui32SysClock;
 
+/* ------------------------------------------------------------------------------------------------
+ *                                     Local Global Variables
+ * -------------------------------------------------------------------------------------------------
+ */
+/* Context */
+tContext sContext;
+
+typedef enum {
+    LUX,
+    TEMP,
+    POWER,
+    SPEED,
+    NONE
+} Sensors;
+Sensors selected_sensor;
+
+uint8_t sensors[NUM_SENSORS] = {DRAW_SPEED, DRAW_POWER, DRAW_TEMP, DRAW_LUX};
+
+/* ------------------------------------------------------------------------------------------------
+ *                                      Function Declarations
+ * -------------------------------------------------------------------------------------------------
+ */
+void define_sensor_axis( void );
+
+void clearAxis (int backround_colour );
 /*
  * Called by main() to do example specific hardware configurations and to
  * create the Process Switch task.
@@ -89,6 +137,10 @@ static void prvDisplayTask(void *pvParameters);
 
 /*-----------------------------------------------------------*/
 
+/* ------------------------------------------------------------------------------------------------
+ *                                      Functions
+ * -------------------------------------------------------------------------------------------------
+ */
 void vDISPTask(void)
 {
     /* Create the task as described in the comments at the top of this file.
@@ -266,6 +318,7 @@ tRadioButtonWidget g_psRadioButtons[] =
                             sizeof(g_psRadioButtons[0]))
 tContainerWidget g_psRadioContainers[] =
     {
+        
         ContainerStruct(g_psPanels + 1, g_psRadioContainers + 1, g_psRadioButtons,
                         &g_sKentec320x240x16_SSD2119, 5, 35, 233, 152,
                         CTR_STYLE_OUTLINE | CTR_STYLE_FILL, ClrWhite, ClrGray, ClrSilver,
@@ -339,7 +392,8 @@ uint32_t g_ui32Panel;
 //
 //*****************************************************************************
 void OnPrevious(tWidget *psWidget)
-{
+{   
+    selected_sensor = NONE;
     //
     // There is nothing to be done if the first panel is already being
     // displayed.
@@ -574,7 +628,6 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
 void OnRadioChange(tWidget *psWidget, uint32_t bSelected)
 {
     uint32_t ui32Idx;
-
     //
     // Find the index of this radio button in the first group.
     //
@@ -585,47 +638,58 @@ void OnRadioChange(tWidget *psWidget, uint32_t bSelected)
             break;
         }
     }
-
-    // //
-    // // See if the radio button was found.
-    // //
-    // if (ui32Idx == NUM_RADIO1_BUTTONS)
-    // {
-    //     //
-    //     // Find the index of this radio button in the second group.
-    //     //
-    //     for (ui32Idx = 0; ui32Idx < NUM_RADIO2_BUTTONS; ui32Idx++)
-    //     {
-    //         if (psWidget == (tWidget *)(g_psRadioButtons2 + ui32Idx))
-    //         {
-    //             break;
-    //         }
-    //     }
-
-    //     //
-    //     // Return if the radio button could not be found.
-    //     //
-    //     if (ui32Idx == NUM_RADIO2_BUTTONS)
-    //     {
-    //         return;
-    //     }
-
-    //     //
-    //     // Sind the radio button is in the second group, offset the index to
-    //     // the indicators associated with the second group.
-    //     //
-    //     ui32Idx += NUM_RADIO1_BUTTONS;
-    // }
-
-    //
-    // Set the matching indicator based on the selected state of the radio
-    // button.
-    //
-    CanvasImageSet(g_psRadioButtonIndicators + ui32Idx,
-                   bSelected ? g_pui8LightOn : g_pui8LightOff);
-    WidgetPaint((tWidget *)(g_psRadioButtonIndicators + ui32Idx));
+    selected_sensor = sensors[ui32Idx];
 }
 
+//*****************************************************************************
+//
+// Plot the axis
+//
+//*****************************************************************************
+/*
+void xyPlaneDraw(axis x_axis, axis y_axis, int num_y_labels, bool grid_on)
+{
+    GrContextForegroundSet(&sContext, ClrDarkBlue); // Set colour to dark blue
+    char cstr[10];
+    // Draw y axix
+    GrLineDrawV(&sContext, x_axis.origin, y_axis.origin, (y_axis.origin - y_axis.length));
+    // Numbers on graph
+    
+    for (int i = 0; i < (y_axis.length / y_axis.interval); i++)
+    {
+        // Plot each interval of y on y-axis
+        GrContextFontSet(&sContext, &g_sFontCm16);
+        int y_range = y_axis.max - y_axis.min;
+        usprintf(cstr, "%d", i * y_range / (num_y_labels-1) );
+        GrStringDrawCentered(&sContext, cstr, -1,
+                             x_axis.origin - 20, y_axis.origin - (i * y_axis.interval), 0);
+        GrLineDrawH(&sContext, x_axis.origin-4, x_axis.origin + 4,  y_axis.origin - (i * y_axis.interval));
+    }
+
+    // Draw x axis
+    GrLineDrawH(&sContext, x_axis.origin, (x_axis.origin + x_axis.length), y_axis.origin);
+    
+    if (grid_on)
+    {
+        // Plot lines for grid
+    }
+}
+*/
+void clearAxis (int backround_colour )
+{
+    tRectangle sRect;
+    sRect.i16XMin = X_AXIS_ORIGIN;
+    sRect.i16YMin = Y_AXIS_ORIGIN;
+    sRect.i16XMax = X_AXIS_ORIGIN + X_AXIS_LENGTH;
+    sRect.i16YMax = Y_AXIS_ORIGIN + Y_AXIS_LENGTH;
+    GrContextForegroundSet(&sContext, backround_colour);
+    GrRectFill(&sContext, &sRect);
+}
+
+void define_sensor_axis( void )
+{
+    
+}
 //*****************************************************************************
 //
 // A simple demonstration of the features of the TivaWare Graphics Library.
@@ -633,7 +697,6 @@ void OnRadioChange(tWidget *psWidget, uint32_t bSelected)
 //*****************************************************************************
 static void prvDisplayTask(void *pvParameters)
 {
-    tContext sContext;
     tRectangle sRect;
 
     //
@@ -734,39 +797,96 @@ static void prvDisplayTask(void *pvParameters)
     const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
     EventBits_t DisplayBits;
     SensorMsg xReceivedMessage;
+    selected_sensor = NONE;
+    char cstr[10];
     while (1)
     {
         //
         // Process any messages in the widget message queue.
         //
         WidgetMessageQueueProcess();
-
         /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
         EventBits_t DisplayBits = xEventGroupWaitBits(xSensorEventGroup,   /* The event group being tested. */
-                                     LUX_DATA_READY | TEMP_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY,    /* The bits within the event group to wait for. */
+                                     LUX_DATA_READY | TEMP_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY |
+                                     DRAW_LUX | DRAW_TEMP | DRAW_POWER | DRAW_SPEED,    /* The bits within the event group to wait for. */
                                      pdTRUE,        /* BIT_0 & BIT_4 should be cleared before returning. */
                                      pdFALSE,       /* Don't wait for both bits, either bit will do. */
                                      xTicksToWait); /* Wait a maximum of 100ms for either bit to be set. */
 
-        if ((DisplayBits & LUX_DATA_READY) != 0 && (xLuxSensorQueue != NULL))
+        // Handle the current state
+        switch (selected_sensor) 
         {
-            /* Receive a message from the created queue to hold complex struct
-             * AMessage structure.  Block for 10 ticks if a message is not
-             * immediately available.  The value is read into a struct AMessage
-             * variable, so after calling xQueueReceive() xReceivedMessage will
-             * hold a copy of xMessage. */
-            if (xQueueReceive(xLuxSensorQueue,
+            case LUX:
+                if ( ( ( DisplayBits & (LUX_DATA_READY) ) == (LUX_DATA_READY) ) )
+                {
+                    if (xQueueReceive(xLuxSensorQueue,
                               &(xReceivedMessage),
                               (TickType_t)10) == pdPASS)
-            {
-                /* xReceivedMessage now contains a copy of xMessage. */
-                // UARTprintf("Queue 1 receives value: %d from Task %d at time stamp = %d\n",
-                        //    xReceivedMessage.lightValue,
-                        //    xReceivedMessage.ulMessageID,
-                        //    xReceivedMessage.ulTimeStamp);
-                // usprintf(cstr, "LUX: %5d", xReceivedMessage.lightValue);
-            }
-            UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
+                    {
+                        UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
+                    }
+                    /* Call update_axis function to scale axis for lux sensor - to be added */
+
+                    /* Plot the lux data by calling a plot_data function - to be added */
+                    usprintf(cstr, "Lux: %d", xReceivedMessage.SensorReading);
+                    clearAxis(ClrWhite);
+
+                    //
+                    // Put the application name in the middle of the banner.
+                    //
+                    GrContextForegroundSet(&sContext, ClrDarkBlue);
+                    GrContextFontSet(&sContext, &g_sFontCm20);
+                    GrStringDrawCentered(&sContext, cstr, -1,
+                                        Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                }
+                break;
+
+            case TEMP:
+                if ( ( ( DisplayBits & (TEMP_DATA_READY) ) == (TEMP_DATA_READY) ) )
+                {
+                    // Plot the data
+                }
+                clearAxis(ClrWhite);
+                //
+                // Put the application name in the middle of the banner.
+                //
+                GrContextForegroundSet(&sContext, ClrDarkBlue);
+                GrContextFontSet(&sContext, &g_sFontCm20);
+                GrStringDrawCentered(&sContext, "Temp: ", -1,
+                                    Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                break;
+
+            case POWER:
+                if ( ( ( DisplayBits & (POWER_DATA_READY) ) == (POWER_DATA_READY) ) )
+                {
+                    // Plot the data
+                }
+                clearAxis(ClrWhite);
+                GrContextForegroundSet(&sContext, ClrDarkBlue);
+                GrContextFontSet(&sContext, &g_sFontCm20);
+                GrStringDrawCentered(&sContext, "Power: ", -1,
+                                    Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                break;
+                
+            case SPEED:
+                if ( ( ( DisplayBits & (SPEED_DATA_READY) ) == (SPEED_DATA_READY) ) )
+                {
+                    // Plot the data
+                }
+                clearAxis(ClrWhite);
+                GrContextForegroundSet(&sContext, ClrDarkBlue);
+                GrContextFontSet(&sContext, &g_sFontCm20);
+                GrStringDrawCentered(&sContext, "Speed: ", -1,
+                                    Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                break;
+            
+            case NONE:
+                // Do nothing
+                break;
+            default:
+                UARTprintf("ERROR\n");
+                return -1;
+                break;
         }
     }
 }
