@@ -161,23 +161,23 @@ bool sensorOpt3001Read(uint16_t *rawData)
 	bool data_ready = true;
 	uint16_t val;
 
-	// // Get status of configuration register
-	// if (readI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val))
-	// {
-	// 	data_ready = ((val>>8 &0xFF) & DATA_RDY_BIT) == DATA_RDY_BIT;
-	// }
-	// else
-	// {
-	// 	return false;
-	// }
+	// Get status of configuration register
+	if (readI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val))
+	{
+		data_ready = ((val>>8 &0xFF) & DATA_RDY_BIT) == DATA_RDY_BIT;
+	}
+	else
+	{
+		return false;
+	}
 
 	if (data_ready)
 	{
-		if (readI2C(MLX90615_I2C_ADDRESS, READ_RAW_OBJECT_TEMP, (uint8_t *)&val))
+		if (readI2C(OPT3001_I2C_ADDRESS, REG_RESULT, (uint8_t *)&val))
 		{
 			// Swap bytes
 			*rawData = (val << 8) | (val>>8 &0xFF);
-			UARTprintf("received: %d", rawData);
+			// UARTprintf("received: %d", rawData);
 		} 
 		else
 		{

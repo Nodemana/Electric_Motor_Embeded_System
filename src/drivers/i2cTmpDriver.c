@@ -62,7 +62,7 @@ bool TempWriteI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
 bool TempReadI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
 {
     uint16_t delay = 1000;
-    uint32_t byteA, byteB;
+    uint8_t byteA, byteB;
 
     
 
@@ -75,7 +75,7 @@ bool TempReadI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
 
     // Load device slave address
     I2CMasterSlaveAddrSet(I2C2_BASE, ui8Addr, false);
-    UARTprintf("Setting Address bus to: %d", (ui8Addr << 1) | false);
+    UARTprintf("Setting Address bus to: %d\n", (ui8Addr << 1) | false);
     // Place the character to be sent in the data register
     I2CMasterDataPut(I2C2_BASE, ui8Reg);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
