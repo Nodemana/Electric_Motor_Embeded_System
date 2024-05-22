@@ -1,39 +1,7 @@
-/*
- * led_task
- *
- * Copyright (C) 2022 Texas Instruments Incorporated
- *
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions
- *  are met:
- *
- *    Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- *    Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the
- *    distribution.
- *
- *    Neither the name of Texas Instruments Incorporated nor the names of
- *    its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+/* ------------------------------------------------------------------------------------------------
+ *                                           Includes
+ * -------------------------------------------------------------------------------------------------
  */
-
 /* Standard includes. */
 #include <stdio.h>
 #include <stdint.h>
@@ -58,6 +26,7 @@
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/timer.h"
+#include "timers.h"
 
 // UART inlcudes
 #include "driverlib/uart.h"
@@ -72,10 +41,22 @@
 
 // Include Event
 #include <event_groups.h>
-/*-----------------------------------------------------------*/
+
+/* ------------------------------------------------------------------------------------------------
+ *                                           Definitions
+ * -------------------------------------------------------------------------------------------------
+ */
 
 // Define moving average window size
-#define WINDOW_SIZE 6
+#define WINDOW_SIZE 6   // Window size of moving average
+
+/* Que */
+#define TASK1_ID 0      // Message ID for the que
+
+/* ------------------------------------------------------------------------------------------------
+ *                                      Extern Global Variables
+ * -------------------------------------------------------------------------------------------------
+ */
 
 /*
  * Time stamp global variable.
@@ -91,14 +72,23 @@ extern SemaphoreHandle_t xTimerSemaphore;
 // Include queue
 extern QueueHandle_t xStructQueue;
 
-/*
- * Global variable to log the last GPIO button pressed.
+/* ------------------------------------------------------------------------------------------------
+ *                                     Local Global Variables
+ * -------------------------------------------------------------------------------------------------
  */
-volatile static uint32_t g_pui32ButtonPressed = NULL;
 
 // Flag to set filter data
 volatile bool filter_data = true;
 volatile bool data_change = false;
+
+// Declare array to store sampled data for moving average
+uint16_t sampledData[WINDOW_SIZE];
+uint8_t currentIndex = 0;
+
+/* ------------------------------------------------------------------------------------------------
+ *                                      Function Declarations
+ * -------------------------------------------------------------------------------------------------
+ */
 
 /*
  * The task to read the OPT3001 sensor.
@@ -112,15 +102,6 @@ static void prvReadLightSensor(void *pvParameters);
 void vLUXTask(void);
 
 /*
- * Handles when Timer0A ends.
- */
-void xTimerHandler(void);
-/*
- * Hardware configuration for the LEDs.
- */
-static void prvConfigureLED(void);
-
-/*
  * Hardware configuration for the OPT3001 Sensor.
  */
 void prvConfigureOPT3001(void);
@@ -130,39 +111,34 @@ void prvConfigureOPT3001(void);
  */
 uint16_t movingAverage(uint16_t newValue);
 
+/* Timer Functions */
+void vTimerCallback(TimerHandle_t xTimer); // Handles the timer interupt
+void vSoftwareTimer( void ); // Software timer
+
+
 /*-----------------------------------------------------------*/
 
 void vLUXTask(void)
 {
-    /* Light the initial LED. */
-    prvConfigureLED();
 
     // Configure the OPT3001 Sensor
     prvConfigureOPT3001();
 
     /* Create the task as described in the comments at the top of this file.
      *
-     * The xTaskCreate parameters in order are:
-     *  - The function that implements the task.
-     *  - The text name for the LED Task - for debug only as it is not used by
-     *    the kernel.
-     *  - The size of the stack to allocate to the task.
-     *  - The parameter passed to the task - just to check the functionality.
-     *  - The priority assigned to the task.
-     *  - The task handle is not required, so NULL is passed. */
-    xTaskCreate(prvReadLightSensor,
-                "LUX",
-                configMINIMAL_STACK_SIZE,
-                NULL,
-                tskIDLE_PRIORITY + 1,
-                NULL);
+     */
+    xTaskCreate(prvReadLightSensor,         // The function that implements the task.
+                "LUX",                      // The text name for the Task 
+                configMINIMAL_STACK_SIZE,   // The size of the stack to allocate to the task.
+                NULL,                       // The parameter(s) passed to the task
+                tskIDLE_PRIORITY + 2,       // The priority assigned to the task.
+                NULL);                      // Task handler
 
-    TimerEnable(TIMER0_BASE, TIMER_A);
+    /* Set up the software timer */
+    vSoftwareTimer();
 }
 
-// Declare array to store sampled data for moving average
-uint16_t sampledData[WINDOW_SIZE];
-uint8_t currentIndex = 0;
+
 
 // Function to calculate moving average
 uint16_t movingAverage(uint16_t newValue)
@@ -183,13 +159,39 @@ uint16_t movingAverage(uint16_t newValue)
 }
 
 /*-----------------------------------------------------------*/
-
-// Timer handler
-void xTimerHandler(void)
+void vSoftwareTimer( void )
 {
-    UARTprintf("int\n");
-    /* Clear the hardware interrupt flag for Timer 0A. */
-    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    // Create a timer
+    TimerHandle_t xTimer = xTimerCreate(
+        "Timer",                // Name of the timer
+        pdMS_TO_TICKS(1000),    // Timer period in ticks (1 second here)
+        pdTRUE,                 // Auto-reload
+        (void *)0,              // Timer ID
+        vTimerCallback          // Callback function
+    );
+
+    // Check if the timer was created successfully
+    if (xTimer == NULL)
+    {
+        UARTprintf("Timer creation failed\n");
+    }
+    else
+    {
+        // Start the timer
+        if (xTimerStart(xTimer, 0) != pdPASS)
+        {
+            UARTprintf("Timer start failed\n");
+        }
+    }
+    UARTprintf("Timer created\n");
+
+}
+
+/* Timer Call Back function */
+void vTimerCallback(TimerHandle_t xTimer)
+{
+    // Toggle an LED or perform any other task
+    // UARTprintf("Timer Callback Executed\n");
 
     BaseType_t xLUXTaskWoken;
 
@@ -205,7 +207,8 @@ void xTimerHandler(void)
     portYIELD_FROM_ISR(xLUXTaskWoken);
 }
 
-#define TASK1_ID 0
+
+
 /*
  * The queue used by both tasks.
  */
@@ -231,14 +234,11 @@ static void prvReadLightSensor(void *pvParameters)
             bool success;
             uint16_t rawData = 0;
             float convertedLux = 0;
-
-            success = sensorOpt3001Read(&rawData);
-
+            success = sensorOpt3001Read(&rawData);      
             // Check if it was a success
             if (success)
             {
                 sensorOpt3001Convert(rawData, &convertedLux);
-
                 // Construct Text
                 uint16_t lux_int = (int)convertedLux;
                 // UARTprintf("Lux: %5d\n", lux_int);
@@ -246,35 +246,35 @@ static void prvReadLightSensor(void *pvParameters)
                 if (filter_data)
                 {
                     uint16_t filteredValue = movingAverage(lux_int);
-                    xMessage.lightValue = filteredValue;
+                    UARTprintf("Filtered data: %d\n", filteredValue);
+                    // xMessage.lightValue = filteredValue;
                 }
                 else
                 {
-                    xMessage.lightValue = lux_int;
+                    // xMessage.lightValue = lux_int;
                 }
+                // // Print filtered value to console via UART
+                // // UARTprintf("Filtered Light Value: %5d\n", filteredValue);
 
-                // Print filtered value to console via UART
-                // UARTprintf("Filtered Light Value: %5d\n", filteredValue);
 
+                // /* Pull the current time stamp. */
+                // xMessage.ulTimeStamp = xTaskGetTickCount();
 
-                /* Pull the current time stamp. */
-                xMessage.ulTimeStamp = xTaskGetTickCount();
-
-                /* Send the entire structure by value to the queue. */
-                xQueueSend(/* The handle of the queue. */
-                           xStructQueue,
-                           /* The address of the xMessage variable.
-                            * sizeof( struct AMessage ) bytes are copied from here into
-                            * the queue. */
-                           (void *)&xMessage,
-                           /* Block time of 0 says don't block if the queue is already
-                            * full.  Check the value returned by xQueueSend() to know
-                            * if the message was sent to the queue successfully. */
-                           (TickType_t)0);
-                           vTaskDelay(pdMS_TO_TICKS(500));
-                           #define EVENT_READ (1 << 0)
-                           extern EventGroupHandle_t xEventGroup;
-                xEventGroupSetBits(xEventGroup, EVENT_READ);
+                // /* Send the entire structure by value to the queue. */
+                // xQueueSend(/* The handle of the queue. */
+                //            xStructQueue,
+                //            /* The address of the xMessage variable.
+                //             * sizeof( struct AMessage ) bytes are copied from here into
+                //             * the queue. */
+                //            (void *)&xMessage,
+                //            /* Block time of 0 says don't block if the queue is already
+                //             * full.  Check the value returned by xQueueSend() to know
+                //             * if the message was sent to the queue successfully. */
+                //            (TickType_t)0);
+                //            vTaskDelay(pdMS_TO_TICKS(500));
+                //            #define EVENT_READ (1 << 0)
+                //            extern EventGroupHandle_t xEventGroup;
+                // xEventGroupSetBits(xEventGroup, EVENT_READ);
             }
             else
             {
@@ -290,53 +290,6 @@ void prvConfigureOPT3001(void)
     // Define worked flag
     bool worked;
 
-    //
-    // Clear the terminal and print the welcome message.
-    //
-    UARTprintf("\033[2J\033[H");
-    UARTprintf("OPT3001 Example\n");
-
-    //
-    // The I2C0 peripheral must be enabled before use.
-    //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
-
-    //
-    // Configure the pin muxing for I2C0 functions on port B2 and B3.
-    // This step is not necessary if your part does not support pin muxing.
-    //
-    GPIOPinConfigure(GPIO_PB2_I2C0SCL);
-    GPIOPinConfigure(GPIO_PB3_I2C0SDA);
-
-    //
-    // Select the I2C function for these pins.  This function will also
-    // configure the GPIO pins pins for I2C operation, setting them to
-    // open-drain operation with weak pull-ups.  Consult the data sheet
-    // to see which functions are allocated per pin.
-    //
-    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);
-    GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);
-    I2CMasterInitExpClk(I2C0_BASE, SysCtlClockGet(), false);
-
-    //
-    // Enable interrupts to the processor.
-    //
-    // IntMasterEnable();
-
-    // //
-    // // Enable interrupts to the processor.
-    // //
-    // // I2CMasterIntEnable(I2C0_BASE);
-    // /* Enable the GPIO Port P2 interrupt in the NVIC (nested interrupt vector controlle ). */
-    // // MAP_I2CMasterIntEnable(I2C0_BASE);
-    // // I2CMasterIntEnableEx(I2C0_BASE, (I2C_MASTER_INT_RX_FIFO_FULL | I2C_MASTER_INT_TX_FIFO_EMPTY| I2C_MASTER_INT_RX_FIFO_REQ |
-    // //                                  I2C_MASTER_INT_TX_FIFO_REQ  | I2C_MASTER_INT_ARB_LOST     | I2C_MASTER_INT_STOP        |
-    // //                                  I2C_MASTER_INT_START        | I2C_MASTER_INT_NACK         | I2C_MASTER_INT_TX_DMA_DONE |
-    // //                                  I2C_MASTER_INT_RX_DMA_DONE  | I2C_MASTER_INT_TIMEOUT      | I2C_MASTER_INT_DATA));
-    // I2CMasterIntEnableEx(I2C0_BASE, (I2C_MASTER_INT_DATA));
-    // IntEnable(INT_I2C0);
-
     // Test that sensor is set up correctly
     UARTprintf("\nTesting OPT3001 Sensor:\n");
     worked = sensorOpt3001Test();
@@ -348,59 +301,12 @@ void prvConfigureOPT3001(void)
         worked = sensorOpt3001Test();
     }
 
-    UARTprintf("All Tests Passed!\n\n");
+    UARTprintf("\n\nAll OPT3001 Tests Passed.\n\n");
 
     // Initialize opt3001 sensor
     sensorOpt3001Init();
     sensorOpt3001Enable(true);
-}
-
-
-void xButtonsHandler( void )
-{
-    // Interript status
-    uint32_t ui32Status;
-
-    /* Read the buttons interrupt status to find the cause of the interrupt. */
-    ui32Status = GPIOIntStatus(BUTTONS_GPIO_BASE, true);
-
-    /* Clear the interrupt. */
-    GPIOIntClear(BUTTONS_GPIO_BASE, ui32Status);
-
-    /* Debounce the input with 200ms filter */
-    if ((xTaskGetTickCount() - g_ui32TimeStamp ) > 200)
-    {
-        /* Log which button was pressed to trigger the ISR. */
-        if ((ui32Status & USR_SW1) == USR_SW1)
-        {
-            if (!filter_data)
-            {
-                data_change = true;
-                filter_data = true;
-                UARTprintf("filter data");
-            }
-        }
-        else if ((ui32Status & USR_SW2) == USR_SW2)
-        {
-            if (filter_data)
-            {
-                data_change = true;
-                filter_data = false;
-                UARTprintf("data not filtered");
-            }
-        }
-
-    }
-    /* Update the time stamp. */
-    g_ui32TimeStamp = xTaskGetTickCount();
-}
-/*-----------------------------------------------------------*/
-
-static void prvConfigureLED(void)
-{
-    /* Configure initial LED state.  PinoutSet() has already configured
-     * LED I/O. */
-    LEDWrite(LED_D1, LED_D1);
+    UARTprintf("Sensor Enabled");
 }
 
 /*-----------------------------------------------------------*/

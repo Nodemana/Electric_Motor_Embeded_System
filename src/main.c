@@ -52,6 +52,7 @@
 /* Kernel includes. */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
 /* Hardware includes. */
 #include "driverlib/pin_map.h"
@@ -72,6 +73,7 @@
 #include "driverlib/timer.h"
 #include "inc/hw_types.h"
 #include "driverlib/debug.h"
+#include "driverlib/i2c.h"
 
 // Motor lib
 #include <motorlib.h>
@@ -81,6 +83,9 @@
 /* The system clock frequency. */
 uint32_t g_ui32SysClock;
 
+/* Global for binary semaphore shared between tasks. */
+SemaphoreHandle_t xTimerSemaphore = NULL;
+
 // Test
 /* Set up the hardware ready to run this demo. */
 static void prvSetupHardware(void);
@@ -89,6 +94,9 @@ static void prvSetupHardware(void);
  * as the example is running. */
 static void prvConfigureUART(void);
 
+/* Set up the I2C2 for temp and lux sensor. */
+static void prvConfigureI2C2(void);
+
 /* Timer configuration */
 static void prvConfigureHWTimer(void);
 
@@ -96,10 +104,13 @@ static void prvConfigureHWTimer(void);
 extern void vCreateMotorTask(void);
 
 /* Software Timer */
-extern void vSoftwareTimer( void );
+// extern void vSoftwareTimer( void );
 
 /* API to trigger the DISP task. */
 extern void vDISPTask(void);
+
+/* API to trigger the LUX task. */
+extern void vLUXTask(void);
 
 static void prvConfigureHallInts(void);
 
@@ -118,10 +129,13 @@ int main(void)
     /* Create the Hello task to output a message over UART. */
     vCreateMotorTask();
 
-    vSoftwareTimer();
+    // vSoftwareTimer();
+    /* Create the binary semaphore used to synchronize the timer ISR and the
+     * sensor processing task. */
+    xTimerSemaphore = xSemaphoreCreateBinary();
     
     vDISPTask();
-
+    vLUXTask();
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
 
@@ -159,6 +173,37 @@ static void prvConfigureUART(void)
     /* Initialize the UART for console I/O. */
     UARTStdioConfig(0, 9600, 16000000);
 }
+
+/*-----------------------------------------------------------*/
+
+static void prvConfigureI2C2(void)
+{
+    //
+    // The I2C0 peripheral must be enabled before use.
+    //
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+
+    //
+    // Configure the pin muxing for I2C0 functions on port B2 and B3.
+    // This step is not necessary if your part does not support pin muxing.
+    //
+    GPIOPinConfigure(GPIO_PN5_I2C2SCL);
+    GPIOPinConfigure(GPIO_PN4_I2C2SDA);
+
+    //
+    // Select the I2C function for these pins.  This function will also
+    // configure the GPIO pins pins for I2C operation, setting them to
+    // open-drain operation with weak pull-ups.  Consult the data sheet
+    // to see which functions are allocated per pin.
+    //
+    GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
+    GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
+    I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
+
+    I2CMasterEnable(I2C2_BASE);
+}
+
 /*-----------------------------------------------------------*/
 
 static void prvConfigureHWTimer(void)
@@ -197,6 +242,9 @@ static void prvSetupHardware(void)
 
     /* Configure UART0 to send messages to terminal. */
     prvConfigureUART();
+
+    /* Configure the I2C2 for temp and lux sensor comms */
+    prvConfigureI2C2();
 
     /* Configure the hardware timer to run in periodic mode. */
     prvConfigureHWTimer();

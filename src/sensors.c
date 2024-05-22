@@ -29,7 +29,7 @@
 #include "timers.h"
 #include "driverlib/i2c.h"
 
-
+/*
 // Motor lib
 #include <motorlib.h>
 
@@ -64,9 +64,11 @@ void vSoftwareTimer( void )
 
 }
 
-/* Timer Call Back function */
+// Timer Call Back function
 void vTimerCallback(TimerHandle_t xTimer)
 {
     // Toggle an LED or perform any other task
     UARTprintf("Timer Callback Executed\n");
 }
+
+*/
