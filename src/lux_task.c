@@ -115,6 +115,10 @@ uint16_t movingAverage(uint16_t newValue);
 void vTimerCallback(TimerHandle_t xTimer); // Handles the timer interupt
 void vSoftwareTimer( void ); // Software timer
 
+/*
+ * Handles when Timer0A ends.
+ */
+void xTimer0AHandler(void);
 
 /*-----------------------------------------------------------*/
 
@@ -307,6 +311,14 @@ void prvConfigureOPT3001(void)
     sensorOpt3001Init();
     sensorOpt3001Enable(true);
     UARTprintf("Sensor Enabled");
+}
+
+// Timer handler
+void xTimer0AHandler(void)
+{
+    UARTprintf("int\n");
+    /* Clear the hardware interrupt flag for Timer 0A. */
+    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
 }
 
 /*-----------------------------------------------------------*/
