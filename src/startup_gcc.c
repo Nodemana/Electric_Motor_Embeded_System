@@ -106,7 +106,7 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // ADC Sequence 2
         TouchScreenIntHandler, // ADC Sequence 3
         IntDefaultHandler,     // Watchdog timer
-        xTimer0AHandler,     // Timer 0 subtimer A
+        xTimer0AHandler,       // Timer 0 subtimer A
         IntDefaultHandler,     // Timer 0 subtimer B
         IntDefaultHandler,     // Timer 1 subtimer A
         IntDefaultHandler,     // Timer 1 subtimer B
