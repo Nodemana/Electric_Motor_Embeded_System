@@ -98,7 +98,7 @@ static void prvReadTempSensor(void *pvParameters)
     {
 
         count++;
-        SysCtlDelay(g_ui32SysClock);
+        SysCtlDelay(g_ui32SysClock / 2);
         // count++;
         // Read and convert light value from OPT3001 sensor
 
