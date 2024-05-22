@@ -70,7 +70,7 @@ extern uint32_t g_ui32SysClock;
 extern SemaphoreHandle_t xTimerSemaphore;
 
 // Include queue
-extern QueueHandle_t xStructQueue;
+extern QueueHandle_t xLuxSensorQueue;
 
 /* ------------------------------------------------------------------------------------------------
  *                                     Local Global Variables
@@ -219,19 +219,19 @@ void vTimerCallback(TimerHandle_t xTimer)
 /*
  * The queue used by both tasks.
  */
-struct AMessage
+typedef struct LuLuxMessage
 {
     uint32_t ulMessageID;
     uint16_t lightValue;
     uint32_t ulTimeStamp;
-} xMessage;
+} LuxMessage;
 
 /*-----------------------------------------------------------*/
 
 static void prvReadLightSensor(void *pvParameters)
 {
-    struct AMessage xMessage; //, *pxPointerToxMessage;
-    xMessage.ulMessageID = TASK1_ID;
+    LuxMessage LuxMsg; //, *pxPointerToLuxMessage;
+    LuxMsg.ulMessageID = TASK1_ID;
     for (;;)
     {
         // // Wait for semaphore to be given by the timer ISR
@@ -254,26 +254,26 @@ static void prvReadLightSensor(void *pvParameters)
                 {
                     uint16_t filteredValue = movingAverage(lux_int);
                     UARTprintf("Filtered data: %d\n", filteredValue);
-                    // xMessage.lightValue = filteredValue;
+                    // LuxMessage.lightValue = filteredValue;
                 }
                 else
                 {
-                    // xMessage.lightValue = lux_int;
+                    // LuxMessage.lightValue = lux_int;
                 }
                 // // Print filtered value to console via UART
                 // // UARTprintf("Filtered Light Value: %5d\n", filteredValue);
 
 
                 // /* Pull the current time stamp. */
-                // xMessage.ulTimeStamp = xTaskGetTickCount();
+                // LuxMessage.ulTimeStamp = xTaskGetTickCount();
 
                 // /* Send the entire structure by value to the queue. */
                 // xQueueSend(/* The handle of the queue. */
-                //            xStructQueue,
-                //            /* The address of the xMessage variable.
+                //            xLuxSensorQueue,
+                //            /* The address of the LuxMessage variable.
                 //             * sizeof( struct AMessage ) bytes are copied from here into
                 //             * the queue. */
-                //            (void *)&xMessage,
+                //            (void *)&LuxMessage,
                 //            /* Block time of 0 says don't block if the queue is already
                 //             * full.  Check the value returned by xQueueSend() to know
                 //             * if the message was sent to the queue successfully. */
