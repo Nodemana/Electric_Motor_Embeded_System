@@ -53,6 +53,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include "driverlib/adc.h"
 
 /* Kernel includes. */
@@ -77,6 +78,7 @@
 #define ADC_SEQ_2 2
 #define ADC_SEQ_3 3
 #define ADC_STEP 0
+#define TWELVE_BIT_MAX 4096
 
 
 /*-----------------------------------------------------------*/
@@ -148,45 +150,77 @@ void vCreateCurrentSensorTask( void )
 static void prvCurrentSensorTask( void *pvParameters) {
     uint32_t ui32Value;
     uint32_t num_samples;
+    int32_t g_Hall_A;
+    int32_t g_Hall_B;
+    int32_t g_Hall_C;
+    uint16_t phase_A_raw_est;
+    uint16_t phase_B_raw;
+    uint16_t phase_C_raw;
+    float cur_A;
+    float cur_B;
+    float cur_C;
 
     for (;;) {
+
+        // Step 1: Read hall effect sensors.
+        g_Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
+        g_Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
+        g_Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
+
+        // Step 2: Read ADCs
         ADCProcessorTrigger(ADC0_BASE, ADC_SEQ_1);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ_1, &ui32Value); // Read the value from the ADC.
-            // UARTprintf("\nPhase C ADC: %d", ui32Value);
-            // UARTprintf("\nNum Samples: %d", num_samples);
+            phase_B_raw = ui32Value;
+
+            // Step 3: Convert voltage to current in Amps
             float voltage = MapVoltage(ui32Value);
             float current = CalculateCurrent(voltage);
-
-            // uint32_t vmsd = (uint32_t)voltage;
-            // uint32_t vd1 = (uint32_t)(voltage * 10) - (vmsd * 10);
-            // uint32_t vd2 = (uint32_t)(voltage * 100) - (vmsd * 100) - (vd1 * 10);
-            // UARTprintf("\t Voltage: %d.%d%d", vmsd, vd1, vd2);
-            // UARTprintf("\ncurrent: %d", (int)(current * 100));
-            // uint32_t cmsd = (uint32_t)current;
-            // uint32_t cd1 = (uint32_t)(current * 10) - (cmsd * 10);
-            // uint32_t cd2 = (uint32_t)(current * 100) - (cmsd * 100) - (cd1 * 10);
-            // UARTprintf("\n Current: %d.%d%d", cmsd, cd1, cd2);
             char voltage_msg[14] = "\t Voltage: %f";
             char current_msg[14] = "\t Current: %f";
             UARTprintf("\nPhase C: ");
             UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-            UartPrintFloat(current_msg, sizeof(current_msg), current);
+            UartPrintFloat(current_msg, sizeof(current_msg), cur_C);
         }
 
         ADCProcessorTrigger(ADC0_BASE, ADC_SEQ_2);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ_2, &ui32Value); // Read the value from the ADC.
+            phase_C_raw = ui32Value;
+
+            // Step 3: Convert voltage to current in Amps
             float voltage = MapVoltage(ui32Value);
-            float current = CalculateCurrent(voltage);
+            cur_C = CalculateCurrent(voltage);
             char voltage_msg[14] = "\t Voltage: %f";
             char current_msg[14] = "\t Current: %f";
             UARTprintf("\nPhase B: ");
             UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-            UartPrintFloat(current_msg, sizeof(current_msg), current);
+            UartPrintFloat(current_msg, sizeof(current_msg), cur_C);
         }
+
+        // Step 4: Estimate total current. Assuming the processor processes ADC faster than the motor can do 1/12th of a revolution.
+        // voltage in a 3 phase system always cnacles out, A + B + C = 0; so A = -(B + C).
+        // Since our range goes between 0 andd 4096 and a regular sinewave goes between -1 and 1 we must account for this offset
+        // using 3/2 * maximum - (B + C). This assures A + B + C = 0 if you were to scale it back between -1 and 1.
+        phase_A_raw_est = (TWELVE_BIT_MAX * 3/2 )-(phase_B_raw + phase_C_raw);
+        float voltage = MapVoltage(ui32Value);
+        cur_A = CalculateCurrent(voltage);
+        char voltage_msg[14] = "\t Voltage: %f";
+        char current_msg[14] = "\t Current: %f";
+        UARTprintf("\nPhase B: ");
+        UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
+        UartPrintFloat(current_msg, sizeof(current_msg), cur_A);
+
+        float total_cur = cur_A + cur_B + cur_C;
+        float power = total_cur * 20;
+        char power_msg[18] = "\n Total power: %f";
+        UartPrintFloat(power_msg, sizeof(power_msg), power);
+
+
+        // Step 5: Add estimate to averaging list.
+
         vTaskDelay(pdMS_TO_TICKS( 250 ));
     }
 
@@ -235,7 +269,6 @@ void UartPrintFloat(char* message, uint32_t length, float value)
 /// @param raw_voltage The 
 float MapVoltage(uint32_t raw_voltage)
 {
-    uint32_t TWELVE_BIT_MAX = 4096;
     float VOLTAGE_MAX = 3.3;
     return ((float)raw_voltage / (float)TWELVE_BIT_MAX) * VOLTAGE_MAX;
 }
