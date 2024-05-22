@@ -68,6 +68,10 @@
 #include "drivers/Kentec320x240x16_ssd2119_spi.h"
 #include "drivers/touch.h"
 #include "images.h"
+
+// Inlcude que.h
+#include "que.h"
+
 /*-----------------------------------------------------------*/
 // Include system clock
 extern uint32_t g_ui32SysClock;
@@ -727,11 +731,42 @@ static void prvDisplayTask(void *pvParameters)
     //
     // Loop forever handling widget messages.
     //
+    const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
+    EventBits_t DisplayBits;
+    SensorMsg xReceivedMessage;
     while (1)
     {
         //
         // Process any messages in the widget message queue.
         //
         WidgetMessageQueueProcess();
+
+        /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
+        EventBits_t DisplayBits = xEventGroupWaitBits(xSensorEventGroup,   /* The event group being tested. */
+                                     LUX_DATA_READY | TEMP_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY,    /* The bits within the event group to wait for. */
+                                     pdTRUE,        /* BIT_0 & BIT_4 should be cleared before returning. */
+                                     pdFALSE,       /* Don't wait for both bits, either bit will do. */
+                                     xTicksToWait); /* Wait a maximum of 100ms for either bit to be set. */
+
+        if ((DisplayBits & LUX_DATA_READY) != 0 && (xLuxSensorQueue != NULL))
+        {
+            /* Receive a message from the created queue to hold complex struct
+             * AMessage structure.  Block for 10 ticks if a message is not
+             * immediately available.  The value is read into a struct AMessage
+             * variable, so after calling xQueueReceive() xReceivedMessage will
+             * hold a copy of xMessage. */
+            if (xQueueReceive(xLuxSensorQueue,
+                              &(xReceivedMessage),
+                              (TickType_t)10) == pdPASS)
+            {
+                /* xReceivedMessage now contains a copy of xMessage. */
+                // UARTprintf("Queue 1 receives value: %d from Task %d at time stamp = %d\n",
+                        //    xReceivedMessage.lightValue,
+                        //    xReceivedMessage.ulMessageID,
+                        //    xReceivedMessage.ulTimeStamp);
+                // usprintf(cstr, "LUX: %5d", xReceivedMessage.lightValue);
+            }
+            UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
+        }
     }
 }

@@ -99,6 +99,9 @@ extern void vDISPTask(void);
 /* API to trigger the LUX task. */
 extern void vLUXTask(void);
 
+/* API to trigger the que task */
+extern void vQueueTask(void);
+
 static void prvConfigureHallInts(void);
 
 /* ------------------------------------------------------------------------------------------------
@@ -121,6 +124,7 @@ int main(void)
     
     vDISPTask();
     vLUXTask();
+    vQueueTask();
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
 

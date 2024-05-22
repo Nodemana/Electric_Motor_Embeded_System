@@ -42,6 +42,9 @@
 // Include Event
 #include <event_groups.h>
 
+// Inlcude que.h
+#include "que.h"
+
 /* ------------------------------------------------------------------------------------------------
  *                                           Definitions
  * -------------------------------------------------------------------------------------------------
@@ -51,7 +54,7 @@
 #define WINDOW_SIZE 6   // Window size of moving average
 
 /* Que */
-#define TASK1_ID 0      // Message ID for the que
+
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Extern Global Variables
@@ -70,7 +73,7 @@ extern uint32_t g_ui32SysClock;
 extern SemaphoreHandle_t xTimerSemaphore;
 
 // Include queue
-extern QueueHandle_t xLuxSensorQueue;
+// extern QueueHandle_t xLuxSensorQueue;
 
 /* ------------------------------------------------------------------------------------------------
  *                                     Local Global Variables
@@ -214,74 +217,62 @@ void vTimerCallback(TimerHandle_t xTimer)
     portYIELD_FROM_ISR(xLUXTaskWoken);
 }
 
-
-
-/*
- * The queue used by both tasks.
- */
-typedef struct LuLuxMessage
-{
-    uint32_t ulMessageID;
-    uint16_t lightValue;
-    uint32_t ulTimeStamp;
-} LuxMessage;
-
 /*-----------------------------------------------------------*/
 
 static void prvReadLightSensor(void *pvParameters)
 {
-    LuxMessage LuxMsg; //, *pxPointerToLuxMessage;
-    LuxMsg.ulMessageID = TASK1_ID;
+    bool success;
+    uint16_t rawData = 0;
+    float convertedLux = 0;
+    uint16_t lux_int = 0;
+    uint16_t filteredValue = 0;
+    SensorMsg LuxMsg; //, *pxPointerToLuxMessage;
+    LuxMsg.MessageID = LUX_MESSAGE;
     for (;;)
     {
         // // Wait for semaphore to be given by the timer ISR
         if (xSemaphoreTake(xTimerSemaphore, portMAX_DELAY) == pdPASS)
         {
             // Read and convert light value from OPT3001 sensor
-            bool success;
-            uint16_t rawData = 0;
-            float convertedLux = 0;
             success = sensorOpt3001Read(&rawData);      
             // Check if it was a success
             if (success)
             {
                 sensorOpt3001Convert(rawData, &convertedLux);
                 // Construct Text
-                uint16_t lux_int = (int)convertedLux;
+                lux_int = (int)convertedLux;
                 // UARTprintf("Lux: %5d\n", lux_int);
                 // Perform moving average filtering
                 if (filter_data)
                 {
-                    uint16_t filteredValue = movingAverage(lux_int);
+                    filteredValue = movingAverage(lux_int);
                     UARTprintf("Filtered data: %d\n", filteredValue);
-                    // LuxMessage.lightValue = filteredValue;
+                    LuxMsg.SensorReading = filteredValue;
                 }
                 else
                 {
-                    // LuxMessage.lightValue = lux_int;
+                    // LuxMsg.SensorReading = filteredValue;
                 }
-                // // Print filtered value to console via UART
-                // // UARTprintf("Filtered Light Value: %5d\n", filteredValue);
+                // Print filtered value to console via UART
+                // UARTprintf("Filtered Light Value: %5d\n", filteredValue);
 
 
-                // /* Pull the current time stamp. */
-                // LuxMessage.ulTimeStamp = xTaskGetTickCount();
-
-                // /* Send the entire structure by value to the queue. */
-                // xQueueSend(/* The handle of the queue. */
-                //            xLuxSensorQueue,
-                //            /* The address of the LuxMessage variable.
-                //             * sizeof( struct AMessage ) bytes are copied from here into
-                //             * the queue. */
-                //            (void *)&LuxMessage,
-                //            /* Block time of 0 says don't block if the queue is already
-                //             * full.  Check the value returned by xQueueSend() to know
-                //             * if the message was sent to the queue successfully. */
-                //            (TickType_t)0);
-                //            vTaskDelay(pdMS_TO_TICKS(500));
-                //            #define EVENT_READ (1 << 0)
-                //            extern EventGroupHandle_t xEventGroup;
-                // xEventGroupSetBits(xEventGroup, EVENT_READ);
+                /* Pull the current time stamp. */
+                LuxMsg.TimeStamp = xTaskGetTickCount();
+                UARTprintf("Sending data: %d\n", LuxMsg.SensorReading);
+                // // /* Send the entire structure by value to the queue. */
+                xQueueSend(/* The handle of the queue. */
+                           xLuxSensorQueue,
+                           /* The address of the LuxMessage variable.
+                            * sizeof( struct AMessage ) bytes are copied from here into
+                            * the queue. */
+                           (void *)&LuxMsg,
+                           /* Block time of 0 says don't block if the queue is already
+                            * full.  Check the value returned by xQueueSend() to know
+                            * if the message was sent to the queue successfully. */
+                           (TickType_t)0);
+                           vTaskDelay(pdMS_TO_TICKS(500));
+                xEventGroupSetBits(xSensorEventGroup, LUX_DATA_READY);
             }
             else
             {

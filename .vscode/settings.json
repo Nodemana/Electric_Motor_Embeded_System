@@ -4,6 +4,7 @@
         "sysctl.h": "c",
         "event_groups.h": "c",
         "i2c.h": "c",
-        "functional": "c"
+        "functional": "c",
+        "rtos_hw_drivers.h": "c"
     }
 }
