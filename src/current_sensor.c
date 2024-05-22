@@ -156,9 +156,6 @@ static void prvCurrentSensorTask( void *pvParameters) {
     uint16_t phase_A_raw_est;
     uint16_t phase_B_raw;
     uint16_t phase_C_raw;
-    float cur_A;
-    float cur_B;
-    float cur_C;
 
     for (;;) {
 
@@ -173,15 +170,6 @@ static void prvCurrentSensorTask( void *pvParameters) {
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ_1, &ui32Value); // Read the value from the ADC.
             phase_B_raw = ui32Value;
-
-            // Step 3: Convert voltage to current in Amps
-            float voltage = MapVoltage(ui32Value);
-            float current = CalculateCurrent(voltage);
-            char voltage_msg[14] = "\t Voltage: %f";
-            char current_msg[14] = "\t Current: %f";
-            UARTprintf("\nPhase C: ");
-            UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-            UartPrintFloat(current_msg, sizeof(current_msg), cur_C);
         }
 
         ADCProcessorTrigger(ADC0_BASE, ADC_SEQ_2);
@@ -189,31 +177,30 @@ static void prvCurrentSensorTask( void *pvParameters) {
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ_2, &ui32Value); // Read the value from the ADC.
             phase_C_raw = ui32Value;
-
-            // Step 3: Convert voltage to current in Amps
-            float voltage = MapVoltage(ui32Value);
-            cur_C = CalculateCurrent(voltage);
-            char voltage_msg[14] = "\t Voltage: %f";
-            char current_msg[14] = "\t Current: %f";
-            UARTprintf("\nPhase B: ");
-            UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-            UartPrintFloat(current_msg, sizeof(current_msg), cur_C);
         }
 
-        // Step 4: Estimate total current. Assuming the processor processes ADC faster than the motor can do 1/12th of a revolution.
+        // Step 3: Phase A voltage. Assuming the processor processes ADC faster than the motor can do 1/12th of a revolution.
         // voltage in a 3 phase system always cnacles out, A + B + C = 0; so A = -(B + C).
         // Since our range goes between 0 andd 4096 and a regular sinewave goes between -1 and 1 we must account for this offset
         // using 3/2 * maximum - (B + C). This assures A + B + C = 0 if you were to scale it back between -1 and 1.
         phase_A_raw_est = (TWELVE_BIT_MAX * 3/2 )-(phase_B_raw + phase_C_raw);
-        float voltage = MapVoltage(ui32Value);
-        cur_A = CalculateCurrent(voltage);
-        char voltage_msg[14] = "\t Voltage: %f";
-        char current_msg[14] = "\t Current: %f";
-        UARTprintf("\nPhase B: ");
-        UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-        UartPrintFloat(current_msg, sizeof(current_msg), cur_A);
 
-        float total_cur = cur_A + cur_B + cur_C;
+        uint16_t raw_Vs[] = {phase_A_raw_est, phase_B_raw, phase_C_raw};
+        char phase_letters[] = {'A', 'B', 'C'};
+        float currents[3];
+        // Step 4: Convert voltage to current in Amps
+        for(uint32_t i = 0; i < 3; i++)
+        {
+            float voltage = MapVoltage(raw_Vs[i]);
+            currents[i] = CalculateCurrent(voltage);
+            char voltage_msg[14] = "\t Voltage: %f";
+            char current_msg[14] = "\t Current: %f";
+            UARTprintf("\nPhase %c: ", phase_letters[i]);
+            UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
+            UartPrintFloat(current_msg, sizeof(current_msg), current);
+        }
+
+        float total_cur = currents[0] + currents[1] + currents[2];
         float power = total_cur * 20;
         char power_msg[18] = "\n Total power: %f";
         UartPrintFloat(power_msg, sizeof(power_msg), power);
