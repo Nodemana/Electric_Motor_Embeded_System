@@ -807,8 +807,7 @@ static void prvDisplayTask(void *pvParameters)
         WidgetMessageQueueProcess();
         /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
         EventBits_t DisplayBits = xEventGroupWaitBits(xSensorEventGroup,   /* The event group being tested. */
-                                     LUX_DATA_READY | TEMP_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY |
-                                     DRAW_LUX | DRAW_TEMP | DRAW_POWER | DRAW_SPEED,    /* The bits within the event group to wait for. */
+                                     LUX_DATA_READY | TEMP_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY, /* The bits within the event group to wait for. */
                                      pdTRUE,        /* BIT_0 & BIT_4 should be cleared before returning. */
                                      pdFALSE,       /* Don't wait for both bits, either bit will do. */
                                      xTicksToWait); /* Wait a maximum of 100ms for either bit to be set. */
