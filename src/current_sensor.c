@@ -197,7 +197,7 @@ static void prvCurrentSensorTask( void *pvParameters) {
             char current_msg[14] = "\t Current: %f";
             UARTprintf("\nPhase %c: ", phase_letters[i]);
             UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-            UartPrintFloat(current_msg, sizeof(current_msg), current);
+            UartPrintFloat(current_msg, sizeof(current_msg), currents[i]);
         }
 
         float total_cur = currents[0] + currents[1] + currents[2];
