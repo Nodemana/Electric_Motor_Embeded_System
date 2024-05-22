@@ -200,13 +200,16 @@ static void prvConfigureHWTimer(void)
     TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
 
     /* Set the Timer 0A load value to run at 10 Hz. */
-    TimerLoadSet(TIMER0_BASE, TIMER_A, configCPU_CLOCK_HZ / 10);
+    TimerLoadSet(TIMER0_BASE, TIMER_A, g_ui32SysClock / 10);
 
     /* Configure the Timer 0A interrupt for timeout. */
     TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
 
     /* Enable the Timer 0A interrupt in the NVIC. */
     IntEnable(INT_TIMER0A);
+
+     /* Enable Timer 0A. */
+    TimerEnable(TIMER0_BASE, TIMER_A);
 
     // /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
@@ -220,7 +223,7 @@ static void prvSetupHardware(void)
     g_ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
                                              SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
                                              SYSCTL_CFG_VCO_240),
-                                            configCPU_CLOCK_HZ);
+                                             configCPU_CLOCK_HZ);
 
     /* Configure device pins. */
     PinoutSet(false, false);
