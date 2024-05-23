@@ -77,7 +77,7 @@
 #include "motorlib.h"
 #include "math.h"
 
-#define SPEED_FILTER_SIZE 10
+#define FILTER_SIZE 10
 #define TIMER_TICKS_PER_SEC 8
 #define speedQUEUE_LENGTH (10)
 
@@ -134,7 +134,7 @@ static void prvSpeedSenseTask(void *pvParameters);
 uint16_t PID(int32_t error, uint16_t current_duty_cycle);
 void Config_Timers(void);
 uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size);
-uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t filter_current_size, uint32_t max_filter_size);
+uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size);
 void ShuffleData(uint32_t *data, uint32_t size);
 
 uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size);
@@ -265,9 +265,13 @@ static void prvSpeedSenseTask(void *pvParameters)
     struct SensorMsg xMessage;
 
     uint32_t last_revolutions_per_minute = 0;
-    uint32_t revolutions_per_minute_filter[SPEED_FILTER_SIZE];
-    uint32_t filter_current_size = 0;
+    uint32_t revolutions_per_minute_filter[FILTER_SIZE];
+    uint32_t speed_filter_current_size = 0;
+
     uint32_t acceleration_RPM_per_second;
+    uint32_t acceleration_RPM_per_second_filter[FILTER_SIZE];
+    uint32_t acceleration_filter_current_size = 0;
+
     uint32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
     uint32_t window_current_size = 0;
 
@@ -305,16 +309,22 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             revolutions_per_minute = revolutions_per_second * 60;
 
-            uint32_t filtered_revoltutions_per_minute = FilterData(revolutions_per_minute, revolutions_per_minute_filter, filter_current_size, SPEED_FILTER_SIZE);
-            if (filter_current_size != (SPEED_FILTER_SIZE - 1))
+            uint32_t filtered_revoltutions_per_minute = FilterData(revolutions_per_minute, revolutions_per_minute_filter, speed_filter_current_size, FILTER_SIZE);
+            if (speed_filter_current_size != (FILTER_SIZE - 1))
             {
-                filter_current_size += 1;
+                speed_filter_current_size += 1;
             }
             acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
 
+            uint32_t filtered_acceleration_RPM_per_second = FilterData(acceleration_RPM_per_second, acceleration_RPM_per_second_filter, acceleration_filter_current_size, FILTER_SIZE);
+            if (acceleration_filter_current_size != (FILTER_SIZE - 1))
+            {
+                acceleration_filter_current_size += 1;
+            }
+
             if (xSemaphoreTake(xSharedSpeedWithMotor, 0) == pdPASS) {
                 revolutions_per_minute_shared = filtered_revoltutions_per_minute;
-                acceleration_RPM_per_second_shared = acceleration_RPM_per_second;
+                acceleration_RPM_per_second_shared = filtered_acceleration_RPM_per_second;
                 xSemaphoreGive(xSharedSpeedWithMotor);
             }
 
@@ -363,13 +373,13 @@ void ShuffleData(uint32_t *data, uint32_t size)
     }
 }
 
-uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t filter_current_size, uint32_t max_filter_size)
+uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size)
 {
-    if (filter_current_size < (max_filter_size - 1))
+    if (speed_filter_current_size < (max_filter_size - 1))
     {
         // Buffer is not full, simply add the new data
-        filter_pointer[filter_current_size] = newData;
-        // UARTprintf("Added Data: %d\n",  filter_pointer[filter_current_size]);
+        filter_pointer[speed_filter_current_size] = newData;
+        // UARTprintf("Added Data: %d\n",  filter_pointer[speed_filter_current_size]);
     }
     else
     {
@@ -378,7 +388,7 @@ uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t filter_
         filter_pointer[max_filter_size - 1] = newData; //
         // UARTprintf("Added Data: %d\n", filter_pointer[max_filter_size - 1]);
     }
-    return GetAverage(filter_pointer, filter_current_size);
+    return GetAverage(filter_pointer, speed_filter_current_size);
 }
 
 uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size)
@@ -397,7 +407,7 @@ uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uin
     {
         // Buffer is not full, simply add the new data
         window_pointer[window_current_size] = newData;
-        // UARTprintf("Added Data: %d\n",  filter_pointer[filter_current_size]);
+        // UARTprintf("Added Data: %d\n",  filter_pointer[speed_filter_current_size]);
     }
     else
     {
