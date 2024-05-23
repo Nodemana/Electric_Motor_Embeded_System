@@ -104,6 +104,8 @@ enum states
 // volatile uint32_t g_ui32TimeStamp = 0;
 // uint32_t previous_g_ui32TimeStamp = 0;
 extern SemaphoreHandle_t xSpeedSemaphore;
+extern SemaphoreHandle_t xSharedSpeedWithMotor;
+
 int32_t Hall_A;
 int32_t Hall_B;
 int32_t Hall_C;
@@ -114,6 +116,9 @@ volatile uint32_t hall_state_counter = 0;
 uint32_t revolutions_per_second;
 uint32_t revolutions_per_minute;
 uint32_t acceleration_RPM_per_second = 0;
+
+uint32_t revolutions_per_minute_shared;
+uint32_t acceleration_RPM_per_second_shared;
 
 enum states motor_control_state = IDLE;
 
@@ -180,6 +185,9 @@ static void prvMotorTask(void *pvParameters)
     uint16_t desired_duty = 20;
     int32_t motor_error;
 
+    uint32_t revolutions_per_minute;
+    uint32_t acceleration_RPM_per_second;
+
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
     /* Set at >10% to get it to start */
@@ -207,6 +215,12 @@ static void prvMotorTask(void *pvParameters)
     enableMotor();
     for (;;)
     {
+        if (xSemaphoreTake(xSharedSpeedWithMotor, 0) == pdPASS) {
+                revolutions_per_minute = revolutions_per_minute_shared;
+                acceleration_RPM_per_second = acceleration_RPM_per_second_shared;
+                xSemaphoreGive(xSharedSpeedWithMotor);
+        }
+
         switch (motor_control_state)
         {
         case IDLE:
@@ -221,6 +235,8 @@ static void prvMotorTask(void *pvParameters)
             //};
             break;
         case RUNNING:
+            UARTprintf("RPM: %d\n", revolutions_per_minute);
+            UARTprintf("RPM/s: %d\n", acceleration_RPM_per_second);
 
             motor_error = desired_duty - duty_value;
             duty_value = PID(motor_error, duty_value);
@@ -238,6 +254,8 @@ static void prvMotorTask(void *pvParameters)
 
             setDuty(duty_value);
             break;
+        default:
+            return -1;
         }
     }
 }
@@ -271,7 +289,7 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             TickCount = TickCount_Curr - TickCount_Prev;
 
-            UARTprintf("Change in tick: %d\n", TickCount);
+            //UARTprintf("Change in tick: %d\n", TickCount);
 
             TimeSinceLastTaskRun = (double)TickCount / configTICK_RATE_HZ;
 
@@ -279,7 +297,7 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             num_revs = ((double)hall_state_counter / 12.0);
 
-            UARTprintf("Number of revs: %d\n", (int)num_revs);
+            //UARTprintf("Number of revs: %d\n", (int)num_revs);
 
             revolutions_per_second_double = num_revs / TimeSinceLastTaskRun;
 
@@ -294,16 +312,22 @@ static void prvSpeedSenseTask(void *pvParameters)
             }
             acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
 
+            if (xSemaphoreTake(xSharedSpeedWithMotor, 0) == pdPASS) {
+                revolutions_per_minute_shared = filtered_revoltutions_per_minute;
+                acceleration_RPM_per_second_shared = acceleration_RPM_per_second;
+                xSemaphoreGive(xSharedSpeedWithMotor);
+            }
+
             // = AccelerationCalculation(revolutions_per_minute, revolutions_per_minute_one_second_window, window_current_size, TIMER_TICKS_PER_SEC); // this is per 8th of a second.
             // if (window_current_size != (TIMER_TICKS_PER_SEC - 1)){
             //     window_current_size += 1;
             // }
             // UARTprintf("Hall States: %d\n", hall_state_counter);
             hall_state_counter = 0;
-            UARTprintf("RPS: %d\n", revolutions_per_second);
-            UARTprintf("RPM: %d\n", revolutions_per_minute);
-            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            // UARTprintf("RPS: %d\n", revolutions_per_second);
+            // UARTprintf("RPM: %d\n", revolutions_per_minute);
+            // UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 

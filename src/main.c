@@ -70,6 +70,8 @@ uint32_t g_ui32SysClock;
 // Semaphores
 SemaphoreHandle_t xADCSemaphore = NULL;
 SemaphoreHandle_t xSpeedSemaphore = NULL;
+SemaphoreHandle_t xSharedSpeedWithMotor = NULL;
+
 
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
@@ -128,9 +130,10 @@ int main(void)
     xADCSemaphore = xSemaphoreCreateBinary();
     xSpeedSemaphore = xSemaphoreCreateBinary();
     xTimerSemaphore = xSemaphoreCreateBinary();
+    xSharedSpeedWithMotor = xSemaphoreCreateMutex();
 
 
-     if ((xADCSemaphore != NULL) && (xSpeedSemaphore != NULL) && (xTimerSemaphore != NULL))
+     if ((xADCSemaphore != NULL) && (xSpeedSemaphore != NULL) && (xTimerSemaphore != NULL) && (xSharedSpeedWithMotor != NULL))
     {
         vDISPTask();
         vLUXTask();
