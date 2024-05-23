@@ -232,7 +232,7 @@ static void prvSpeedSenseTask( void *pvParameters )
     struct Message xMessage;
 
     uint32_t last_revolutions_per_minute = 0;
-    uint32_t revolutions_per_minute_filter[10];
+    uint32_t revolutions_per_minute_filter[5];
     uint32_t filter_current_size = 0;
     for(;;)
     {
