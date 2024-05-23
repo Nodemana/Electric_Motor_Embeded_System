@@ -126,6 +126,8 @@ Sensors selected_sensor;
 
 uint8_t sensors[NUM_SENSORS] = {DRAW_SPEED, DRAW_POWER, DRAW_TEMP, DRAW_LUX};
 
+uint32_t SpeedThreshold = 100000;
+
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
  * -------------------------------------------------------------------------------------------------

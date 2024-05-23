@@ -198,27 +198,27 @@ void vCreateMotorTask(void)
                 tskIDLE_PRIORITY + 1,
                 NULL);
 
-    xTaskCreate(prvESTOPTask,
-                "ESTOP",
-                configMINIMAL_STACK_SIZE,
-                NULL,
-                tskIDLE_PRIORITY + 3,
-                NULL)
+    // xTaskCreate(prvESTOPTask,
+    //             "ESTOP",
+    //             configMINIMAL_STACK_SIZE,
+    //             NULL,
+    //             tskIDLE_PRIORITY + 3,
+    //             NULL);
 }
 /*-----------------------------------------------------------*/
 
-static void prvESTOPTask(void *pvParameters)
-{
-    if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
-        motor_control_state = E_STOPPING;
-    }
-}
+// static void prvESTOPTask(void *pvParameters)
+// {
+//     if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
+//         motor_control_state = E_STOPPING;
+//     }
+// }
 
 static void prvMotorTask(void *pvParameters)
 {
-    uint16_t duty_value = 5;
-    uint16_t period_value = 100;
-    uint16_t desired_duty = 20;
+    uint16_t duty_value = 500;
+    uint16_t period_value = 10000;
+    uint16_t desired_duty = 10000;
     int32_t motor_error;
 
     uint32_t revolutions_per_minute;
@@ -271,8 +271,8 @@ static void prvMotorTask(void *pvParameters)
             //};
             break;
         case RUNNING:
-            // UARTprintf("RPM: %d\n", revolutions_per_minute);
-            // UARTprintf("RPM/s: %d\n", acceleration_RPM_per_second);
+            UARTprintf("RPM: %d\n", revolutions_per_minute);
+            UARTprintf("RPM/s: %d\n", acceleration_RPM_per_second);
 
             motor_error = desired_duty - duty_value;
             duty_value = PID(motor_error, duty_value);
@@ -354,13 +354,13 @@ static void prvSpeedSenseTask(void *pvParameters)
                 speed_filter_current_size += 1;
             }
 
-            if(xSemaphoreTake(xSharedSpeedESTOPThreshold, 0) == pdPASS)
-            {
-                if(filtered_revoltutions_per_minute > SpeedThreshold){
-                    xSemaphoreGive(xESTOPSemaphore);
-                    xSemaphoreGive(xSharedSpeedESTOPThreshold);
-                }
-            }
+            // if(xSemaphoreTake(xSharedSpeedESTOPThreshold, 0) == pdPASS)
+            // {
+            //     if(filtered_revoltutions_per_minute > SpeedThreshold){
+            //         xSemaphoreGive(xESTOPSemaphore);
+            //         xSemaphoreGive(xSharedSpeedESTOPThreshold);
+            //     }
+            // }
 
             acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
 
