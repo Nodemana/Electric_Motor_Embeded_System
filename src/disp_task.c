@@ -99,6 +99,15 @@
 // Include system clock
 extern uint32_t g_ui32SysClock;
 
+/*
+ * The is the event group which tasks will read (i.e. GUI, E-STOP conditions)
+ */
+
+/*
+ * Queue used to send and receive complete struct AMessage structures. 
+ * One has been created for each sensor
+ */
+
 /* ------------------------------------------------------------------------------------------------
  *                                     Local Global Variables
  * -------------------------------------------------------------------------------------------------
@@ -822,7 +831,7 @@ static void prvDisplayTask(void *pvParameters)
                               &(xReceivedMessage),
                               (TickType_t)10) == pdPASS)
                     {
-                        UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
+                        //UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
                     }
                     /* Call update_axis function to scale axis for lux sensor - to be added */
 
@@ -870,13 +879,26 @@ static void prvDisplayTask(void *pvParameters)
             case SPEED:
                 if ( ( ( DisplayBits & (SPEED_DATA_READY) ) == (SPEED_DATA_READY) ) )
                 {
-                    // Plot the data
+                    if (xQueueReceive(xSpeedSensorQueue,
+                              &(xReceivedMessage),
+                              (TickType_t)10) == pdPASS)
+                    {
+                        UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
+                    }
+                    /* Call update_axis function to scale axis for lux sensor - to be added */
+
+                    /* Plot the lux data by calling a plot_data function - to be added */
+                    usprintf(cstr, "Speed: %d", xReceivedMessage.SensorReading);
+                    clearAxis(ClrWhite);
+
+                    //
+                    // Put the application name in the middle of the banner.
+                    //
+                    GrContextForegroundSet(&sContext, ClrDarkBlue);
+                    GrContextFontSet(&sContext, &g_sFontCm20);
+                    GrStringDrawCentered(&sContext, cstr, -1,
+                                        Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
                 }
-                clearAxis(ClrWhite);
-                GrContextForegroundSet(&sContext, ClrDarkBlue);
-                GrContextFontSet(&sContext, &g_sFontCm20);
-                GrStringDrawCentered(&sContext, "Speed: ", -1,
-                                    Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
                 break;
             
             case NONE:
