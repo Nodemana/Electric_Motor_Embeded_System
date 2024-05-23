@@ -85,6 +85,12 @@ typedef struct SensorMsg
     uint32_t TimeStamp;
 } SensorMsg;
 
+typedef struct CalcMsg
+{
+    float ClaclulatedData;
+    uint32_t TimeStamp;
+} CalcMsg;
+
 
 /*
  * The is the event group which tasks will read (i.e. GUI, E-STOP conditions)

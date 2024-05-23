@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 /* Kernel includes. */
 #include "FreeRTOS.h"
@@ -45,8 +46,6 @@
 // Include Event
 #include <event_groups.h>
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "inc/hw_memmap.h"
 #include "inc/hw_nvic.h"
 #include "inc/hw_sysctl.h"
@@ -806,6 +805,7 @@ static void prvDisplayTask(void *pvParameters)
     const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
     EventBits_t DisplayBits;
     SensorMsg xReceivedMessage;
+    CalcMsg xRecievedPower;
     selected_sensor = NONE;
     char cstr[10];
     while (1)
@@ -869,10 +869,31 @@ static void prvDisplayTask(void *pvParameters)
                 {
                     // Plot the data
                 }
+
+                if (xQueueReceive(xPowerSensorQueue,
+                        &(xRecievedPower),
+                        (TickType_t)10) == pdPASS)
+                {
+                    //UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
+                }
+
                 clearAxis(ClrWhite);
                 GrContextForegroundSet(&sContext, ClrDarkBlue);
                 GrContextFontSet(&sContext, &g_sFontCm20);
-                GrStringDrawCentered(&sContext, "Power: ", -1,
+
+                float val = xRecievedPower.ClaclulatedData;
+
+                char txt[] = "Power:    ";
+ 
+                uint32_t msd = (uint32_t)val;
+                uint32_t d1 = (uint32_t)(val * 10) - (msd * 10);
+                uint32_t d2 = (uint32_t)(val * 100) - (msd * 100) - (d1 * 10);
+                
+                txt[6] = msd;
+                txt[7] = d1;
+                txt[8] = d2;
+
+                GrStringDrawCentered(&sContext, txt, -1,
                                     Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
                 break;
                 

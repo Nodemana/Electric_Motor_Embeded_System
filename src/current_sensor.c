@@ -152,19 +152,20 @@ void vCreateCurrentSensorTask( void )
 static void prvCurrentSensorTask( void *pvParameters) {
     uint32_t ui32Value;
     uint32_t num_samples;
-    int32_t g_Hall_A;
-    int32_t g_Hall_B;
-    int32_t g_Hall_C;
+    // int32_t g_Hall_A;
+    // int32_t g_Hall_B;
+    // int32_t g_Hall_C;
     uint16_t phase_A_raw_est;
     uint16_t phase_B_raw;
     uint16_t phase_C_raw;
+    CalcMsg msg;
 
     for (;;) {
 
         // Step 1: Read hall effect sensors.
-        g_Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
-        g_Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
-        g_Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
+        // g_Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
+        // g_Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
+        // g_Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
         // Step 2: Read ADCs
         ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_1);
@@ -189,29 +190,40 @@ static void prvCurrentSensorTask( void *pvParameters) {
         phase_A_raw_est = (TWELVE_BIT_MAX * 3/2 )-(phase_B_raw + phase_C_raw);
 
         uint16_t raw_Vs[] = {phase_A_raw_est, phase_B_raw, phase_C_raw};
-        char phase_letters[] = {'A', 'B', 'C'};
+        // char phase_letters[] = {'A', 'B', 'C'};
         float currents[3];
         // Step 4: Convert voltage to current in Amps
         for(uint32_t i = 0; i < 3; i++)
         {
             float voltage = MapVoltage(raw_Vs[i]);
             currents[i] = CalculateCurrent(voltage);
-            char voltage_msg[14] = "\t Voltage: %f";
-            char current_msg[14] = "\t Current: %f";
-            UARTprintf("\nPhase %c: ", phase_letters[i]);
-            UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-            UartPrintFloat(current_msg, sizeof(current_msg), currents[i]);
+            // char voltage_msg[14] = "\t Voltage: %f";
+            // char current_msg[14] = "\t Current: %f";
+            // UARTprintf("\nPhase %c: ", phase_letters[i]);
+            // UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
+            // UartPrintFloat(current_msg, sizeof(current_msg), currents[i]);
         }
 
         float total_cur = currents[0] + currents[1] + currents[2];
         float power = total_cur * 20 * 1.732;
-        char power_msg[18] = "\n Total power: %f";
+        char power_msg[18] = "\n Total power: %f\n";
         UartPrintFloat(power_msg, sizeof(power_msg), power);
-
-
+        msg.ClaclulatedData = power;
+        msg.TimeStamp = xTaskGetTickCount();
         // Step 5: Add estimate to averaging list.
 
+        xQueueSend(/* The handle of the queue. */
+            xPowerSensorQueue,
+            /* The address of the LuxMessage variable.
+            * sizeof( struct AMessage ) bytes are copied from here into
+            * the queue. */
+            (void *)&msg,
+            /* Block time of 0 says don't block if the queue is already
+            * full.  Check the value returned by xQueueSend() to know
+            * if the message was sent to the queue successfully. */
+            (TickType_t)0);
         vTaskDelay(pdMS_TO_TICKS( 250 ));
+        xEventGroupSetBits(xSensorEventGroup, POWER_DATA_READY);
     }
 
 }        
@@ -291,7 +303,7 @@ float CalculatePower(float current)
 
 void ConfigADCInputs(void)
 {
-    UARTprintf("Iniitialising ADC hardware");
+    UARTprintf("\nIniitialising ADC hardware");
     SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC1 ); // Enable ADC1 Perhipheral
 
     // ADC ISENC (Phase C voltage) Config
@@ -322,7 +334,7 @@ void ConfigADCInputs(void)
 
     ADCIntRegister(ADC1_BASE, ADC_SEQ_2, ADC1_SEQ2_ISR); // Registers the ISR with the specific ADC and Sequence.
     ADCIntEnableEx(ADC1_BASE, ADC_INT_SS2); // Enables Interrupts for specific Sequence
-    UARTprintf("Done setting up ADC hardware.");
+    UARTprintf("\nDone setting up ADC hardware.");
 }
 
 /*-----------------------------------------------------------*/

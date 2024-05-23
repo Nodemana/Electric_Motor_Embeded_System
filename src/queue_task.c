@@ -41,6 +41,13 @@ void vQueueTask(void)
         /* Size of each item is big enough to hold the
         whole structure. */
         sizeof( SensorMsg ) );
+    
+    xPowerSensorQueue = xQueueCreate(
+                /* The number of items the queue can hold. */
+                POWER_QUEUE_LENGTH,
+                /* Size of each item is big enough to hold the
+                whole structure. */
+                sizeof( CalcMsg ) );
 
     if ((xLuxSensorQueue == NULL)) // || (xPointerQueue == NULL)
     {
