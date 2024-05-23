@@ -262,16 +262,36 @@ static void prvSpeedSenseTask( void *pvParameters )
     uint32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
     uint32_t window_current_size = 0;
 
-    TickType_t time_difference;
+    // TickType_t time_difference;
+    TickType_t TickCount_Prev = 0;
+    TickType_t TickCount_Curr;
+    TickType_t TickCount;
+
+    double TimeSinceLastTaskRun;
+    double revolutions_per_second_double;
+    double num_revs;
 
     for(;;)
     {
         if( xSemaphoreTake(xSpeedSemaphore, portMAX_DELAY) == pdPASS) {
-            time_difference = xTaskGetTickCount();
-            time_difference = time_difference / 10000;
-            //UARTprintf("Time Difference: %d\n", time_difference);
 
-            revolutions_per_second = (hall_state_counter * TIMER_TICKS_PER_SEC)/12; // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
+            TickCount_Curr = xTaskGetTickCount();
+
+            TickCount = TickCount_Curr - TickCount_Prev;
+
+            UARTprintf("Change in tick: %d\n", TickCount);
+
+            TimeSinceLastTaskRun = (double)TickCount / configTICK_RATE_HZ;
+
+            // TimeSinceLastTaskRun = (double)TickCount_Curr / configTICK_RATE_HZ;          
+
+            num_revs = ((double)hall_state_counter / 12.0);
+
+            UARTprintf("Number of revs: %d\n", (int)num_revs);
+
+            revolutions_per_second_double = num_revs / TimeSinceLastTaskRun;
+          
+            revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
             
             revolutions_per_minute = revolutions_per_second * 60;
 
@@ -285,15 +305,19 @@ static void prvSpeedSenseTask( void *pvParameters )
             }
             //UARTprintf("Hall States: %d\n", hall_state_counter);
             hall_state_counter = 0;
-            //UARTprintf("RPS: %d\n", revolutions_per_second);
-            //UARTprintf("RPM: %d\n", revolutions_per_minute);
-            //UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            //UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            UARTprintf("RPS: %d\n", revolutions_per_second);
+            UARTprintf("RPM: %d\n", revolutions_per_minute);
+            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             //last_revolutions_per_minute = revolutions_per_minute;
 
+                       // TickCount_Prev = xTaskGetTickCount(); 
+            TickCount_Prev = TickCount_Curr;
+
             //Message Construction
             xMessage.SensorReading = filtered_revoltutions_per_minute;
+            xMessage.TimeStamp = TickCount_Prev;
             xMessage.TimeStamp = xTaskGetTickCount();
 
 
