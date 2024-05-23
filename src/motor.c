@@ -72,6 +72,7 @@
 #include "semphr.h"
 #include "driverlib/timer.h"
 #include "driverlib/rom_map.h"
+#include "que.h"
 
 #include "motorlib.h"
 
@@ -97,7 +98,6 @@ enum states {
 /*
  * Queue used to send and receive complete struct Message structures.
  */
-QueueHandle_t xSpeedQueue = NULL;
 
 //volatile uint32_t g_ui32TimeStamp = 0;
 //uint32_t previous_g_ui32TimeStamp = 0;
@@ -148,12 +148,7 @@ void vCreateMotorTask( void );
 void vCreateMotorTask( void )
 {
 
-    xSpeedQueue = xQueueCreate(
-                          /* The number of items the queue can hold. */
-                          speedQUEUE_LENGTH,
-                          /* Size of each item is big enough to hold the
-                          whole structure. */
-                          sizeof( xMessage ) );
+
 
     /* Create the task as described in the comments at the top of this file.
      *
@@ -176,7 +171,7 @@ void vCreateMotorTask( void )
                  "Speed",
                  configMINIMAL_STACK_SIZE,
                  NULL,
-                 tskIDLE_PRIORITY + 2,
+                 tskIDLE_PRIORITY + 1,
                  NULL );
 
 }
@@ -249,7 +244,7 @@ static void prvMotorTask( void *pvParameters )
 
 static void prvSpeedSenseTask( void *pvParameters )
 {
-    struct Message xMessage;
+    struct SensorMsg xMessage;
 
     uint32_t last_revolutions_per_minute = 0;
     uint32_t revolutions_per_minute_filter[5];
@@ -269,20 +264,20 @@ static void prvSpeedSenseTask( void *pvParameters )
             acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
             //UARTprintf("Hall States: %d\n", hall_state_counter);
             hall_state_counter = 0;
-            UARTprintf("RPS: %d\n", revolutions_per_second);
-            UARTprintf("RPM: %d\n", revolutions_per_minute);
-            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            //UARTprintf("RPS: %d\n", revolutions_per_second);
+            //UARTprintf("RPM: %d\n", revolutions_per_minute);
+            //UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            //UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 
             //Message Construction
-            xMessage.payload = revolutions_per_minute;
-            xMessage.timestamp = xTaskGetTickCount();
+            xMessage.SensorReading = filtered_revoltutions_per_minute;
+            xMessage.TimeStamp = xTaskGetTickCount();
 
 
             /* Send the entire structure by value to the queue. */
-            xQueueSend(xSpeedQueue,
+            xQueueSend(xSpeedSensorQueue,
                    /* The address of the xMessage variable.
                     * sizeof( struct AMessage ) bytes are copied from here into
                     * the queue. */
@@ -291,6 +286,7 @@ static void prvSpeedSenseTask( void *pvParameters )
                     * full.  Check the value returned by xQueueSend() to know
                     * if the message was sent to the queue successfully. */
                    ( TickType_t ) 0 );
+            xEventGroupSetBits(xSensorEventGroup, SPEED_DATA_READY);
 
         }
     }
@@ -367,19 +363,7 @@ void HallSensorHandler(void)
 /*
  Timer ISR
 */
-void xTimer1BIntHandler_SpeedTimerISR(void) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    // Give the semaphore to unblock the task.
-    xSemaphoreGiveFromISR(xSpeedSemaphore, &xHigherPriorityTaskWoken);
-    // Perform a context switch if needed.
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    // Clear the timer interrupt.
-    TimerIntClear(TIMER1_BASE, TIMER_TIMB_TIMEOUT);
-}
-
-// Timer handler
-void xTimer2AIntHandler_(void)
+void xTimer2AIntHandler_SpeedTimerISR(void)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 

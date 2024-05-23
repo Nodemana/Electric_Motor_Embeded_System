@@ -14,7 +14,7 @@ void vQueueTask(void);
 QueueHandle_t xLuxSensorQueue = NULL;
 QueueHandle_t xTempSensorQueue = NULL;
 QueueHandle_t xPowerSensorQueue = NULL;
-QueueHandle_t xSPeedSensorQueue = NULL;
+QueueHandle_t xSpeedSensorQueue = NULL;
 
 /*
  * The is the event group which tasks will read (i.e. GUI, E-STOP conditions)
@@ -34,6 +34,13 @@ void vQueueTask(void)
         /* Size of each item is big enough to hold the
         whole structure. */
         sizeof(SensorMsg));
+
+    xSpeedSensorQueue = xQueueCreate(
+        /* The number of items the queue can hold. */
+        SPEED_QUEUE_LENGTH,
+        /* Size of each item is big enough to hold the
+        whole structure. */
+        sizeof( SensorMsg ) );
 
     if ((xLuxSensorQueue == NULL)) // || (xPointerQueue == NULL)
     {

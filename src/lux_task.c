@@ -72,6 +72,7 @@ extern uint32_t g_ui32SysClock;
 // The binary semaphore used by the timer ISR & task
 extern SemaphoreHandle_t xTimerSemaphore;
 
+
 // Include queue
 // extern QueueHandle_t xLuxSensorQueue;
 
@@ -224,10 +225,9 @@ static void prvReadLightSensor(void *pvParameters)
     bool success;
     uint16_t rawData = 0;
     float convertedLux = 0;
-    uint16_t lux_int = 0;
-    uint16_t filteredValue = 0;
+    uint32_t lux_int = 0;
+    uint32_t filteredValue = 0;
     SensorMsg LuxMsg; //, *pxPointerToLuxMessage;
-    LuxMsg.MessageID = LUX_MESSAGE;
     for (;;)
     {
         // // Wait for semaphore to be given by the timer ISR

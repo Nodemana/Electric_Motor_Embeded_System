@@ -81,8 +81,7 @@
  */
 typedef struct SensorMsg
 {
-    uint32_t MessageID;
-    uint16_t SensorReading;
+    uint32_t SensorReading;
     uint32_t TimeStamp;
 } SensorMsg;
 
@@ -99,6 +98,6 @@ extern EventGroupHandle_t xSensorEventGroup;
 extern QueueHandle_t xLuxSensorQueue;
 extern QueueHandle_t xTempSensorQueue;
 extern QueueHandle_t xPowerSensorQueue;
-extern QueueHandle_t xSPeedSensorQueue;
+extern QueueHandle_t xSpeedSensorQueue;
 
 #endif // GLOBAL_STRUCT_H
