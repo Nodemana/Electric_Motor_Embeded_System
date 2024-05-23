@@ -85,6 +85,12 @@ struct Message
 } xMessage;
 
 
+enum states {
+  IDLE,
+  STARTING,
+  RUNNING,
+  E_STOPPING,
+} motor_control_state;
 
 /*-----------------------------------------------------------*/
 
@@ -106,6 +112,11 @@ volatile uint32_t hall_state_counter = 0;
 uint32_t revolutions_per_second;
 uint32_t revolutions_per_minute;
 uint32_t acceleration_RPM_per_second = 0;
+
+enum states motor_control_state = IDLE;
+
+
+
 
 
 /*
@@ -179,13 +190,12 @@ static void prvMotorTask( void *pvParameters )
     int32_t motor_error;
 
 
-
+    
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
     /* Set at >10% to get it to start */
     setDuty(duty_value);
 
-    //UARTprintf("\n Success: %d", success);
     /* Kick start the motor */
 
     //1. Read hall effect sensors
@@ -208,21 +218,31 @@ static void prvMotorTask( void *pvParameters )
     enableMotor();
     for (;;)
     {
-        motor_error = desired_duty - duty_value;
-        //UARTprintf("Motor Error: %d\n", motor_error);
-        //UARTprintf("Duty Value: %d\n\n", duty_value);
-        // Update duty_value
-        duty_value = PID(motor_error, duty_value);
+        switch (motor_control_state) {
+            case IDLE:
+                motor_control_state = STARTING;
+            case STARTING:
+                    motor_error = desired_duty - duty_value;
+                    duty_value = PID(motor_error, duty_value);
 
-        // if(duty_value>=period_value){
-        //     stopMotor(1);
-        //     continue;
-        // }
-        
-        setDuty(duty_value);
-        
-        //vTaskDelay(pdMS_TO_TICKS( 250 ));
-        // duty_value++;
+                    setDuty(duty_value);
+                    if(motor_error == 0){
+                        motor_control_state = RUNNING;
+                    };
+            case RUNNING:
+
+                motor_error = desired_duty - duty_value;
+                duty_value = PID(motor_error, duty_value);
+
+                setDuty(duty_value);
+
+            case E_STOPPING:
+                desired_duty = 0;
+                motor_error = desired_duty - duty_value;
+                duty_value = PID(motor_error, duty_value);
+
+                setDuty(duty_value);
+        }
 
     }
 }
