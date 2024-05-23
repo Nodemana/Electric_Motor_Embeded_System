@@ -289,11 +289,9 @@ float CalculatePower(float current)
 
 /*-----------------------------------------------------------*/
 
-//uint16_t ScaleADC()
-
 void ConfigADCInputs(void)
 {
-    SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC1 ); // Enable ADC1 Perhipheral
+    UARTprintf("Iniitialising ADC hardware");
     SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC1 ); // Enable ADC1 Perhipheral
 
     // ADC ISENC (Phase C voltage) Config
@@ -324,6 +322,7 @@ void ConfigADCInputs(void)
 
     ADCIntRegister(ADC1_BASE, ADC_SEQ_2, ADC1_SEQ2_ISR); // Registers the ISR with the specific ADC and Sequence.
     ADCIntEnableEx(ADC1_BASE, ADC_INT_SS2); // Enables Interrupts for specific Sequence
+    UARTprintf("Done setting up ADC hardware.");
 }
 
 /*-----------------------------------------------------------*/
