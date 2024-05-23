@@ -75,6 +75,7 @@
 #include "que.h"
 
 #include "motorlib.h"
+#include "math.h"
 
 #define SPEED_FILTER_SIZE 10
 #define TIMER_TICKS_PER_SEC 8
@@ -183,7 +184,7 @@ static void prvMotorTask( void *pvParameters )
 {
     uint16_t duty_value = 5;
     uint16_t period_value = 100;
-    uint16_t desired_duty = 100;
+    uint16_t desired_duty = 20;
     int32_t motor_error;
 
 
@@ -218,27 +219,33 @@ static void prvMotorTask( void *pvParameters )
         switch (motor_control_state) {
             case IDLE:
                 motor_control_state = STARTING;
+                break;
             case STARTING:
-                    motor_error = desired_duty - duty_value;
-                    duty_value = PID(motor_error, duty_value);
-
-                    setDuty(duty_value);
-                    if(motor_error == 0){
-                        motor_control_state = RUNNING;
-                    };
+                    //motor_error = desired_duty - duty_value;
+                    //duty_value = PID(motor_error, duty_value);
+                    //setDuty(duty_value);
+                    //if(motor_error == 0){
+                    motor_control_state = RUNNING;
+                    //};
+                    break;
             case RUNNING:
 
                 motor_error = desired_duty - duty_value;
                 duty_value = PID(motor_error, duty_value);
 
                 setDuty(duty_value);
+                //UARTprintf("Desured Value: %d\n", desired_duty);
+                //UARTprintf("Error Value: %d\n", motor_error);
 
+                //UARTprintf("Duty Value: %d\n", duty_value);
+                break;
             case E_STOPPING:
                 desired_duty = 0;
                 motor_error = desired_duty - duty_value;
                 duty_value = PID(motor_error, duty_value);
 
                 setDuty(duty_value);
+                break;
         }
 
     }
@@ -262,7 +269,7 @@ static void prvSpeedSenseTask( void *pvParameters )
         if( xSemaphoreTake(xSpeedSemaphore, portMAX_DELAY) == pdPASS) {
             time_difference = xTaskGetTickCount();
             time_difference = time_difference / 10000;
-            UARTprintf("Time Difference: %d\n", time_difference);
+            //UARTprintf("Time Difference: %d\n", time_difference);
 
             revolutions_per_second = (hall_state_counter * TIMER_TICKS_PER_SEC)/12; // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
             
@@ -281,7 +288,7 @@ static void prvSpeedSenseTask( void *pvParameters )
             //UARTprintf("RPS: %d\n", revolutions_per_second);
             //UARTprintf("RPM: %d\n", revolutions_per_minute);
             //UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            //UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             //last_revolutions_per_minute = revolutions_per_minute;
 
@@ -314,7 +321,7 @@ void ShuffleData(uint32_t *data, uint32_t size) {
 }
 
 uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t filter_current_size, uint32_t max_filter_size) {
-    if (filter_current_size < max_filter_size) {
+    if (filter_current_size < (max_filter_size - 1)) {
         // Buffer is not full, simply add the new data
         filter_pointer[filter_current_size] = newData;
         //UARTprintf("Added Data: %d\n",  filter_pointer[filter_current_size]);
@@ -336,7 +343,7 @@ uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size) {
 }
 
 uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size) {
-    if (window_current_size < max_window_size) {
+    if (window_current_size < (max_window_size-1)) {
         // Buffer is not full, simply add the new data
         window_pointer[window_current_size] = newData;
         //UARTprintf("Added Data: %d\n",  filter_pointer[filter_current_size]);
@@ -346,7 +353,7 @@ uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uin
         window_pointer[max_window_size - 1] = newData;//
         //UARTprintf("Added Data: %d\n", filter_pointer[max_filter_size - 1]);
     }
-    return window_pointer[window_current_size] - window_pointer[0];
+    return window_pointer[window_current_size - 1] - window_pointer[0];
 }
 
 
@@ -357,7 +364,7 @@ uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uin
 uint16_t PID(int32_t error, uint16_t current_duty_cycle)
 {
     float gain = 0.2;
-    return current_duty_cycle + (gain * error);
+    return round((float)current_duty_cycle + (float)(gain * error));
 }
 
 /*-----------------------------------------------------------*/

@@ -82,7 +82,7 @@ SemaphoreHandle_t xTimerSemaphore = NULL;
 /* Set up the hardware ready to run this demo. */
 static void prvSetupHardware(void);
 
-void Config_Timers(void);
+//void Config_Timers(void);
 
 /* This function sets up UART0 to be used for a console to display information
  * as the example is running. */
@@ -247,7 +247,7 @@ static void prvSetupHardware(void)
     /* Configure UART0 to send messages to terminal. */
     prvConfigureUART();
 
-    Config_Timers();
+    //Config_Timers();
 
     /* Configure the I2C2 for temp and lux sensor comms */
     prvConfigureI2C2();
@@ -312,35 +312,6 @@ static void prvConfigureHallInts(void)
     IntEnable(INT_GPION);
     /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
-}
-
-void Config_Timers(void) {
-    //
-    // Enable the peripherals used by this example.
-    //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
-
-    //
-    // Enable processor interrupts.
-    //
-    IntMasterEnable();
-
-    //
-    // Configure the two 32-bit periodic timers.
-    //
-    TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
-    TimerLoadSet(TIMER1_BASE, TIMER_B, g_ui32SysClock/8); // 125 ms
-
-    //
-    // Setup the interrupts for the timer timeouts.
-    //
-    IntEnable(INT_TIMER1B);
-    TimerIntEnable(TIMER1_BASE, TIMER_TIMB_TIMEOUT);
-
-    //
-    // Enable the timers.
-    //
-    TimerEnable(TIMER1_BASE, TIMER_B);
 }
 
 
