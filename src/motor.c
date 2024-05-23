@@ -77,6 +77,11 @@
 #include "motorlib.h"
 #include "math.h"
 
+/* ------------------------------------------------------------------------------------------------
+ *                                           Definitions
+ * -------------------------------------------------------------------------------------------------
+ */
+
 #define FILTER_SIZE 10
 #define TIMER_TICKS_PER_SEC 8
 #define speedQUEUE_LENGTH (10)
@@ -101,18 +106,31 @@ enum states
  * Queue used to send and receive complete struct Message structures.
  */
 
-// volatile uint32_t g_ui32TimeStamp = 0;
-// uint32_t previous_g_ui32TimeStamp = 0;
+
+/* ------------------------------------------------------------------------------------------------
+ *                                      Extern Global Variables
+ * -------------------------------------------------------------------------------------------------
+ */
+
 extern SemaphoreHandle_t xSpeedSemaphore;
 extern SemaphoreHandle_t xSharedSpeedWithMotor;
+extern SemaphoreHandle_t xSharedSpeedESTOPThreshold;
+extern SemaphoreHandle_t xESTOPSemaphore;
+
+
+extern uint32_t SpeedThreshold;
+
+/* ------------------------------------------------------------------------------------------------
+ *                                     Local Global Variables
+ * -------------------------------------------------------------------------------------------------
+ */
 
 int32_t Hall_A;
 int32_t Hall_B;
 int32_t Hall_C;
 
 volatile uint32_t hall_state_counter = 0;
-// uint32_t time_difference;
-// uint32_t one_revolution_ticks;
+
 uint32_t revolutions_per_second;
 uint32_t revolutions_per_minute;
 uint32_t acceleration_RPM_per_second = 0;
@@ -122,17 +140,21 @@ uint32_t acceleration_RPM_per_second_shared;
 
 enum states motor_control_state = IDLE;
 
-/*
- * The tasks as described in the comments at the top of this file.
+/* ------------------------------------------------------------------------------------------------
+ *                                      Function Declarations
+ * -------------------------------------------------------------------------------------------------
  */
+
 static void prvMotorTask(void *pvParameters);
 static void prvSpeedSenseTask(void *pvParameters);
+static void prvESTOPTask(void *pvParameters);
+
 
 /*
  * PID Controller
  */
 uint16_t PID(int32_t error, uint16_t current_duty_cycle);
-void Config_Timers(void);
+
 uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size);
 uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size);
 void ShuffleData(uint32_t *data, uint32_t size);
@@ -175,8 +197,22 @@ void vCreateMotorTask(void)
                 NULL,
                 tskIDLE_PRIORITY + 1,
                 NULL);
+
+    xTaskCreate(prvESTOPTask,
+                "ESTOP",
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                tskIDLE_PRIORITY + 3,
+                NULL)
 }
 /*-----------------------------------------------------------*/
+
+static void prvESTOPTask(void *pvParameters)
+{
+    if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
+        motor_control_state = E_STOPPING;
+    }
+}
 
 static void prvMotorTask(void *pvParameters)
 {
@@ -253,6 +289,9 @@ static void prvMotorTask(void *pvParameters)
             duty_value = PID(motor_error, duty_value);
 
             setDuty(duty_value);
+            if(motor_error == 0){
+                motor_control_state = IDLE;
+            }
             break;
         default:
             return -1;
@@ -314,6 +353,15 @@ static void prvSpeedSenseTask(void *pvParameters)
             {
                 speed_filter_current_size += 1;
             }
+
+            if(xSemaphoreTake(xSharedSpeedESTOPThreshold, 0) == pdPASS)
+            {
+                if(filtered_revoltutions_per_minute > SpeedThreshold){
+                    xSemaphoreGive(xESTOPSemaphore);
+                    xSemaphoreGive(xSharedSpeedESTOPThreshold);
+                }
+            }
+
             acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
 
             uint32_t filtered_acceleration_RPM_per_second = FilterData(acceleration_RPM_per_second, acceleration_RPM_per_second_filter, acceleration_filter_current_size, FILTER_SIZE);
