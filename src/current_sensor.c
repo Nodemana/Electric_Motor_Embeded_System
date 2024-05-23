@@ -175,6 +175,7 @@ static void prvCurrentSensorTask( void *pvParameters) {
         }
 
         ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_2);
+        ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_2);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC1_BASE, ADC_SEQ_2, &ui32Value); // Read the value from the ADC.
@@ -285,8 +286,14 @@ float CalculatePower(float current)
 
 /*-----------------------------------------------------------*/
 
+
+/*-----------------------------------------------------------*/
+
+//uint16_t ScaleADC()
+
 void ConfigADCInputs(void)
 {
+    SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC1 ); // Enable ADC1 Perhipheral
     SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC1 ); // Enable ADC1 Perhipheral
 
     // ADC ISENC (Phase C voltage) Config

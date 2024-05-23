@@ -46,11 +46,13 @@ extern void vPortSVCHandler(void);
 extern void xPortSysTickHandler(void);
 extern void HallSensorHandler(void);
 extern void TouchScreenIntHandler(void);
-extern void xTimer0AHandler(void);
+extern void xTimer2AIntHandler_(void);
 extern void ADC1_SEQ1_ISR(void);
 extern void ADC1_SEQ2_ISR(void);
-// extern void ADC0_SEQ3_ISR(void);
+extern void xTimer1BIntHandler_SpeedTimerISR(void);
 
+extern void xTimer0BIntHandler(void);
+extern void xTimer1BIntHandler(void);
 
 //*****************************************************************************
 //
@@ -110,11 +112,11 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // ADC Sequence 2
         TouchScreenIntHandler, // ADC Sequence 3
         IntDefaultHandler,     // Watchdog timer
-        xTimer0AHandler,       // Timer 0 subtimer A
+        IntDefaultHandler,       // Timer 0 subtimer A
         IntDefaultHandler,     // Timer 0 subtimer B
         IntDefaultHandler,     // Timer 1 subtimer A
-        IntDefaultHandler,     // Timer 1 subtimer B
-        IntDefaultHandler,     // Timer 2 subtimer A
+        xTimer1BIntHandler_SpeedTimerISR,     // Timer 1 subtimer B
+        xTimer2AIntHandler_,     // Timer 2 subtimer A
         IntDefaultHandler,     // Timer 2 subtimer B
         IntDefaultHandler,     // Analog Comparator 0
         IntDefaultHandler,     // Analog Comparator 1
@@ -203,7 +205,7 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // I2C8 Master and Slave
         IntDefaultHandler,     // I2C9 Master and Slave
         IntDefaultHandler      // GPIO Port T
-};
+    };
 
 //*****************************************************************************
 //

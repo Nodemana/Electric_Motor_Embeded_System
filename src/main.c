@@ -66,9 +66,12 @@
 /* The system clock frequency. */
 uint32_t g_ui32SysClock;
 
+// Semaphores
+SemaphoreHandle_t xADCSemaphore = NULL;
+SemaphoreHandle_t xSpeedSemaphore = NULL;
+
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
-SemaphoreHandle_t xADCSemaphore = NULL;
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
@@ -78,6 +81,8 @@ SemaphoreHandle_
 
 /* Set up the hardware ready to run this demo. */
 static void prvSetupHardware(void);
+
+void Config_Timers(void);
 
 /* This function sets up UART0 to be used for a console to display information
  * as the example is running. */
@@ -90,6 +95,8 @@ static void prvConfigureI2C2(void);
 static void prvConfigureHWTimer(void);
 
 /* API to trigger the 'Hello world' task. */
+extern void vCreateCurrentSensorTask( void );
+
 extern void vCreateMotorTask(void);
 
 /* Software Timer */
@@ -107,6 +114,7 @@ extern void vCreateCurrentSensorTask( void );
 
 static void prvConfigureHallInts(void);
 
+
 /* ------------------------------------------------------------------------------------------------
  *                                      Functions
  * -------------------------------------------------------------------------------------------------
@@ -119,23 +127,19 @@ int main(void)
 
     // Semaphore Initialisation
     xADCSemaphore = xSemaphoreCreateBinary();
+    xSpeedSemaphore = xSemaphoreCreateBinary();
     xTimerSemaphore = xSemaphoreCreateBinary();
 
-     if (xADCSemaphore != NULL)
-    {
-        /* Create the Hello task to output a message over UART. */
-        vCreateMotorTask();
-        vCreateCurrentSensorTask();
 
-        // vSoftwareTimer();
-        /* Create the binary semaphore used to synchronize the timer ISR and the
-        * sensor processing task. */
-        
-        
+     if ((xADCSemaphore != NULL) && (xSpeedSemaphore != NULL) && (xTimerSemaphore != NULL))
+    {
         vDISPTask();
         vLUXTask();
         vQueueTask();
-        /* Start the tasks and timer running. */
+        vCreateMotorTask();
+        vCreateCurrentSensorTask();
+
+    /* Start the tasks and timer running. */
         vTaskStartScheduler();
     }
     /* If all is well, the scheduler will now be running, and the following
@@ -143,8 +147,7 @@ int main(void)
     there was insufficient FreeRTOS heap memory available for the idle and/or
     timer tasks to be created.  See the memory management section on the
     FreeRTOS web site for more details. */
-    for (;;)
-        ;
+    for (;;);
 }
 /*-----------------------------------------------------------*/
 static void prvConfigureUART(void)
@@ -208,22 +211,22 @@ static void prvConfigureI2C2(void)
 static void prvConfigureHWTimer(void)
 {
     /* The Timer 0 peripheral must be enabled for use. */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER2);
 
     /* Configure Timer 0 in full-width periodic mode. */
-    TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+    TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC);
 
     /* Set the Timer 0A load value to run at 10 Hz. */
-    TimerLoadSet(TIMER0_BASE, TIMER_A, g_ui32SysClock / 10);
+    TimerLoadSet(TIMER2_BASE, TIMER_A, g_ui32SysClock / 8);
 
     /* Configure the Timer 0A interrupt for timeout. */
-    TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    TimerIntEnable(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 
     /* Enable the Timer 0A interrupt in the NVIC. */
-    IntEnable(INT_TIMER0A);
+    IntEnable(INT_TIMER2A);
 
      /* Enable Timer 0A. */
-    TimerEnable(TIMER0_BASE, TIMER_A);
+    TimerEnable(TIMER2_BASE, TIMER_A);
 
     // /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
@@ -244,6 +247,8 @@ static void prvSetupHardware(void)
 
     /* Configure UART0 to send messages to terminal. */
     prvConfigureUART();
+
+    Config_Timers();
 
     /* Configure the I2C2 for temp and lux sensor comms */
     prvConfigureI2C2();
@@ -309,6 +314,36 @@ static void prvConfigureHallInts(void)
     /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
 }
+
+void Config_Timers(void) {
+    //
+    // Enable the peripherals used by this example.
+    //
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
+
+    //
+    // Enable processor interrupts.
+    //
+    IntMasterEnable();
+
+    //
+    // Configure the two 32-bit periodic timers.
+    //
+    TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
+    TimerLoadSet(TIMER1_BASE, TIMER_B, g_ui32SysClock/8); // 125 ms
+
+    //
+    // Setup the interrupts for the timer timeouts.
+    //
+    IntEnable(INT_TIMER1B);
+    TimerIntEnable(TIMER1_BASE, TIMER_TIMB_TIMEOUT);
+
+    //
+    // Enable the timers.
+    //
+    TimerEnable(TIMER1_BASE, TIMER_B);
+}
+
 
 /*-----------------------------------------------------------*/
 

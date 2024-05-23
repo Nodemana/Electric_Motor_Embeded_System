@@ -121,7 +121,7 @@ void vSoftwareTimer( void ); // Software timer
 /*
  * Handles when Timer0A ends.
  */
-void xTimer0AHandler(void);
+//void xTimer0AHandler(void);
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Functions
@@ -307,13 +307,7 @@ void prvConfigureOPT3001(void)
     UARTprintf("Sensor Enabled");
 }
 
-// Timer handler
-void xTimer0AHandler(void)
-{
-    UARTprintf("int\n");
-    /* Clear the hardware interrupt flag for Timer 0A. */
-    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-}
+
 
 /*-----------------------------------------------------------*/
 
