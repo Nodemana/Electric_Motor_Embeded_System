@@ -24,6 +24,7 @@
 #include "task.h"
 #include "semphr.h"
 
+
 /* Hardware includes. */
 #include "driverlib/pin_map.h"
 #include "inc/hw_memmap.h"
@@ -66,6 +67,10 @@
 /* The system clock frequency. */
 uint32_t g_ui32SysClock;
 
+// Semaphores
+SemaphoreHandle_t xADCSemaphore = NULL;
+SemaphoreHandle_t xSpeedSemaphore = NULL;
+
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
 
@@ -88,6 +93,8 @@ static void prvConfigureI2C2(void);
 static void prvConfigureHWTimer(void);
 
 /* API to trigger the 'Hello world' task. */
+extern void vCreateCurrentSensorTask( void );
+
 extern void vCreateMotorTask(void);
 
 /* Software Timer */
@@ -104,6 +111,7 @@ extern void vQueueTask(void);
 
 static void prvConfigureHallInts(void);
 
+
 /* ------------------------------------------------------------------------------------------------
  *                                      Functions
  * -------------------------------------------------------------------------------------------------
@@ -114,27 +122,29 @@ int main(void)
     /* Prepare the hardware to run this demo. */
     prvSetupHardware();
 
-    /* Create the Hello task to output a message over UART. */
-    vCreateMotorTask();
-
-    // vSoftwareTimer();
-    /* Create the binary semaphore used to synchronize the timer ISR and the
-     * sensor processing task. */
+    // Semaphore Initialisation
+    xADCSemaphore = xSemaphoreCreateBinary();
+    xSpeedSemaphore = xSemaphoreCreateBinary();
     xTimerSemaphore = xSemaphoreCreateBinary();
-    
-    vDISPTask();
-    vLUXTask();
-    vQueueTask();
-    /* Start the tasks and timer running. */
-    vTaskStartScheduler();
 
+
+     if ((xADCSemaphore != NULL) && (xSpeedSemaphore != NULL) && (xTimerSemaphore != NULL))
+    {
+        vDISPTask();
+        vLUXTask();
+        vQueueTask();
+        vCreateMotorTask();
+        vCreateCurrentSensorTask();
+
+    /* Start the tasks and timer running. */
+        vTaskStartScheduler();
+    }
     /* If all is well, the scheduler will now be running, and the following
     line will never be reached.  If the following line does execute, then
     there was insufficient FreeRTOS heap memory available for the idle and/or
     timer tasks to be created.  See the memory management section on the
     FreeRTOS web site for more details. */
-    for (;;)
-        ;
+    for (;;);
 }
 /*-----------------------------------------------------------*/
 static void prvConfigureUART(void)
@@ -235,6 +245,8 @@ static void prvSetupHardware(void)
     /* Configure UART0 to send messages to terminal. */
     prvConfigureUART();
 
+    Config_Timers();
+
     /* Configure the I2C2 for temp and lux sensor comms */
     prvConfigureI2C2();
 
@@ -299,6 +311,36 @@ static void prvConfigureHallInts(void)
     /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
 }
+
+void Config_Timers(void) {
+    //
+    // Enable the peripherals used by this example.
+    //
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
+
+    //
+    // Enable processor interrupts.
+    //
+    IntMasterEnable();
+
+    //
+    // Configure the two 32-bit periodic timers.
+    //
+    TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
+    TimerLoadSet(TIMER1_BASE, TIMER_A, g_ui32SysClock/8); // 125 ms
+
+    //
+    // Setup the interrupts for the timer timeouts.
+    //
+    IntEnable(INT_TIMER1A);
+    TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
+
+    //
+    // Enable the timers.
+    //
+    TimerEnable(TIMER1_BASE, TIMER_A);
+}
+
 
 /*-----------------------------------------------------------*/
 

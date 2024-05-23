@@ -46,7 +46,14 @@ extern void vPortSVCHandler(void);
 extern void xPortSysTickHandler(void);
 extern void HallSensorHandler(void);
 extern void TouchScreenIntHandler(void);
-extern void xTimer0AHandler(void);
+extern void xTimer0AIntHandler(void);
+extern void ADC1_SEQ1_ISR(void);
+extern void ADC1_SEQ2_ISR(void);
+extern void ADC1_SEQ3_ISR(void);
+extern void SpeedTimerISR(void);
+
+extern void xTimer0BIntHandler(void);
+extern void xTimer1BIntHandler(void);
 
 //*****************************************************************************
 //
@@ -106,10 +113,10 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // ADC Sequence 2
         TouchScreenIntHandler, // ADC Sequence 3
         IntDefaultHandler,     // Watchdog timer
-        xTimer0AHandler,       // Timer 0 subtimer A
-        IntDefaultHandler,     // Timer 0 subtimer B
-        IntDefaultHandler,     // Timer 1 subtimer A
-        IntDefaultHandler,     // Timer 1 subtimer B
+        xTimer0AIntHandler,       // Timer 0 subtimer A
+        xTimer0BIntHandler,     // Timer 0 subtimer B
+        SpeedTimerISR,     // Timer 1 subtimer A
+        xTimer1BIntHandler,     // Timer 1 subtimer B
         IntDefaultHandler,     // Timer 2 subtimer A
         IntDefaultHandler,     // Timer 2 subtimer B
         IntDefaultHandler,     // Analog Comparator 0
@@ -133,9 +140,9 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // PWM Generator 3
         IntDefaultHandler,     // uDMA Software Transfer
         IntDefaultHandler,     // uDMA Error
-        IntDefaultHandler,     // ADC1 Sequence 0
-        IntDefaultHandler,     // ADC1 Sequence 1
-        IntDefaultHandler,     // ADC1 Sequence 2
+        ADC1_SEQ1_ISR,                               // ADC Sequence 1
+        ADC1_SEQ2_ISR,                      // ADC Sequence 2
+        ADC1_SEQ3_ISR,                      // ADC Sequence 3
         IntDefaultHandler,     // ADC1 Sequence 3
         IntDefaultHandler,     // External Bus Interface 0
         IntDefaultHandler,     // GPIO Port J
@@ -199,7 +206,7 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // I2C8 Master and Slave
         IntDefaultHandler,     // I2C9 Master and Slave
         IntDefaultHandler      // GPIO Port T
-};
+    };
 
 //*****************************************************************************
 //
