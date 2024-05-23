@@ -367,7 +367,7 @@ void HallSensorHandler(void)
 /*
  Timer ISR
 */
-void SpeedTimerISR(void) {
+void xTimer1BIntHandler_SpeedTimerISR(void) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     // Give the semaphore to unblock the task.
@@ -375,5 +375,19 @@ void SpeedTimerISR(void) {
     // Perform a context switch if needed.
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     // Clear the timer interrupt.
-    TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
+    TimerIntClear(TIMER1_BASE, TIMER_TIMB_TIMEOUT);
+}
+
+// Timer handler
+void xTimer2AIntHandler_(void)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    // Give the semaphore to unblock the task.
+    xSemaphoreGiveFromISR(xSpeedSemaphore, &xHigherPriorityTaskWoken);
+    // Perform a context switch if needed.
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    // Clear the timer interrupt.
+    //  /* Clear the hardware interrupt flag for Timer 0A. */
+    TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 }

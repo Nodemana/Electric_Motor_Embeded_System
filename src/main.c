@@ -82,6 +82,8 @@ SemaphoreHandle_t xTimerSemaphore = NULL;
 /* Set up the hardware ready to run this demo. */
 static void prvSetupHardware(void);
 
+void Config_Timers(void);
+
 /* This function sets up UART0 to be used for a console to display information
  * as the example is running. */
 static void prvConfigureUART(void);
@@ -208,22 +210,22 @@ static void prvConfigureI2C2(void)
 static void prvConfigureHWTimer(void)
 {
     /* The Timer 0 peripheral must be enabled for use. */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER2);
 
     /* Configure Timer 0 in full-width periodic mode. */
-    TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+    TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC);
 
     /* Set the Timer 0A load value to run at 10 Hz. */
-    TimerLoadSet(TIMER0_BASE, TIMER_A, g_ui32SysClock / 10);
+    TimerLoadSet(TIMER2_BASE, TIMER_A, g_ui32SysClock / 8);
 
     /* Configure the Timer 0A interrupt for timeout. */
-    TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    TimerIntEnable(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 
     /* Enable the Timer 0A interrupt in the NVIC. */
-    IntEnable(INT_TIMER0A);
+    IntEnable(INT_TIMER2A);
 
      /* Enable Timer 0A. */
-    TimerEnable(TIMER0_BASE, TIMER_A);
+    TimerEnable(TIMER2_BASE, TIMER_A);
 
     // /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
@@ -327,18 +329,18 @@ void Config_Timers(void) {
     // Configure the two 32-bit periodic timers.
     //
     TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
-    TimerLoadSet(TIMER1_BASE, TIMER_A, g_ui32SysClock/8); // 125 ms
+    TimerLoadSet(TIMER1_BASE, TIMER_B, g_ui32SysClock/8); // 125 ms
 
     //
     // Setup the interrupts for the timer timeouts.
     //
-    IntEnable(INT_TIMER1A);
-    TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
+    IntEnable(INT_TIMER1B);
+    TimerIntEnable(TIMER1_BASE, TIMER_TIMB_TIMEOUT);
 
     //
     // Enable the timers.
     //
-    TimerEnable(TIMER1_BASE, TIMER_A);
+    TimerEnable(TIMER1_BASE, TIMER_B);
 }
 
 
