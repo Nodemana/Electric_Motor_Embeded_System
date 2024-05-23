@@ -616,14 +616,15 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         WidgetPaint((tWidget *)&g_psSliders[SLIDER_LOCKED_INDEX]);
     }
 
-    if (psWidget == (tWidget *)&g_psSliders[SLIDER_TEXT_VAL_INDEX])
+    if (psWidget == (tWidget *)&g_psSliders[0])
     {
+        UARTprintf("Speed threshold = :%d", i32Value);
         //
         // Yes - update the canvas to show the slider value.
         //
         usprintf(pcSliderText, "%3d%%", i32Value);
-        SliderTextSet(&g_psSliders[SLIDER_TEXT_VAL_INDEX], pcSliderText);
-        WidgetPaint((tWidget *)&g_psSliders[SLIDER_TEXT_VAL_INDEX]);
+        SliderTextSet(&g_psSliders[0], pcSliderText);
+        WidgetPaint((tWidget *)&g_psSliders[0]);
     }
 }
 

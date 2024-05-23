@@ -271,8 +271,8 @@ static void prvMotorTask(void *pvParameters)
             //};
             break;
         case RUNNING:
-            UARTprintf("RPM: %d\n", revolutions_per_minute);
-            UARTprintf("RPM/s: %d\n", acceleration_RPM_per_second);
+            // UARTprintf("RPM: %d\n", revolutions_per_minute);
+            // UARTprintf("RPM/s: %d\n", acceleration_RPM_per_second);
 
             motor_error = desired_duty - duty_value;
             duty_value = PID(motor_error, duty_value);
