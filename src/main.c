@@ -131,7 +131,7 @@ int main(void)
     xTimerSemaphore = xSemaphoreCreateBinary();
 
 
-     if ((xADCSemaphore != NULL) && (xSpeedSemaphore != NULL) && (xTimerSemaphore != NULL))
+    if ((xADCSemaphore != NULL) && (xSpeedSemaphore != NULL) && (xTimerSemaphore != NULL))
     {
         vDISPTask();
         vLUXTask();
