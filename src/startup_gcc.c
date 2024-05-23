@@ -47,9 +47,9 @@ extern void xPortSysTickHandler(void);
 extern void HallSensorHandler(void);
 extern void TouchScreenIntHandler(void);
 extern void xTimer0AHandler(void);
-extern void ADC0_SEQ1_ISR(void);
-extern void ADC0_SEQ2_ISR(void);
-extern void ADC0_SEQ3_ISR(void);
+extern void ADC1_SEQ1_ISR(void);
+extern void ADC1_SEQ2_ISR(void);
+// extern void ADC0_SEQ3_ISR(void);
 
 
 //*****************************************************************************
@@ -106,8 +106,8 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // PWM Generator 2
         IntDefaultHandler,     // Quadrature Encoder 0
         IntDefaultHandler,     // ADC Sequence 0
-        ADC0_SEQ1_ISR,         // ADC Sequence 1
-        ADC0_SEQ2_ISR,         // ADC Sequence 2
+        IntDefaultHandler,     // ADC Sequence 1
+        IntDefaultHandler,     // ADC Sequence 2
         TouchScreenIntHandler, // ADC Sequence 3
         IntDefaultHandler,     // Watchdog timer
         xTimer0AHandler,       // Timer 0 subtimer A
@@ -137,9 +137,9 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // PWM Generator 3
         IntDefaultHandler,     // uDMA Software Transfer
         IntDefaultHandler,     // uDMA Error
-        IntDefaultHandler,     // ADC1 Sequence 0
-        IntDefaultHandler,     // ADC1 Sequence 1
-        IntDefaultHandler,     // ADC1 Sequence 2
+        IntDefaultHandler,     // ADC1 Sequence 0 MARK
+        ADC1_SEQ1_ISR,         // ADC1 Sequence 1
+        ADC1_SEQ2_ISR,         // ADC1 Sequence 2
         IntDefaultHandler,     // ADC1 Sequence 3
         IntDefaultHandler,     // External Bus Interface 0
         IntDefaultHandler,     // GPIO Port J

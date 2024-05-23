@@ -73,6 +73,8 @@
 #include "driverlib/gpio.h"
 #include "driverlib/pwm.h"
 
+#include "que.h"
+
 #define ADC_SEQ_0 0
 #define ADC_SEQ_1 1
 #define ADC_SEQ_2 2
@@ -109,9 +111,9 @@ float CalculateCurrent(float);
  * Hardware interrupt handlers
  */
 
-void ADC0_SEQ1_ISR(void);
-void ADC0_SEQ2_ISR(void);
-void ADC0_SEQ3_ISR(void);
+void ADC1_SEQ1_ISR(void);
+void ADC1_SEQ2_ISR(void);
+// void ADC0_SEQ3_ISR(void);
 
 /*-----------------------------------------------------------*/
 
@@ -165,17 +167,17 @@ static void prvCurrentSensorTask( void *pvParameters) {
         g_Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
 
         // Step 2: Read ADCs
-        ADCProcessorTrigger(ADC0_BASE, ADC_SEQ_1);
+        ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_1);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
-            num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ_1, &ui32Value); // Read the value from the ADC.
+            num_samples = ADCSequenceDataGet(ADC1_BASE, ADC_SEQ_1, &ui32Value); // Read the value from the ADC.
             phase_B_raw = ui32Value;
         }
 
-        ADCProcessorTrigger(ADC0_BASE, ADC_SEQ_2);
+        ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_2);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
-            num_samples = ADCSequenceDataGet(ADC0_BASE, ADC_SEQ_2, &ui32Value); // Read the value from the ADC.
+            num_samples = ADCSequenceDataGet(ADC1_BASE, ADC_SEQ_2, &ui32Value); // Read the value from the ADC.
             phase_C_raw = ui32Value;
         }
 
@@ -201,7 +203,7 @@ static void prvCurrentSensorTask( void *pvParameters) {
         }
 
         float total_cur = currents[0] + currents[1] + currents[2];
-        float power = total_cur * 20;
+        float power = total_cur * 20 * 1.732;
         char power_msg[18] = "\n Total power: %f";
         UartPrintFloat(power_msg, sizeof(power_msg), power);
 
@@ -285,20 +287,22 @@ float CalculatePower(float current)
 
 void ConfigADCInputs(void)
 {
-    SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC0 ); // Enable ADC0 Perhipheral
+    SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC1 ); // Enable ADC1 Perhipheral
 
     // ADC ISENC (Phase C voltage) Config
     SysCtlPeripheralEnable( SYSCTL_PERIPH_GPIOE );
     //Makes GPIO an INPUT and sets them to be ANALOG
     GPIOPinTypeADC( GPIO_PORTE_BASE, GPIO_PIN_3 );
 
-    ADCSequenceConfigure( ADC0_BASE, ADC_SEQ_1, ADC_TRIGGER_PROCESSOR, 0 );
-    //uint32_t ui32Base, uint32_t ui32SequenceNum, uint32_t ui32Step, uint32_t ui32Config
-    ADCSequenceStepConfigure( ADC0_BASE, ADC_SEQ_1, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH0 | ADC_CTL_END );
-    ADCSequenceEnable( ADC0_BASE, ADC_SEQ_1 );
+    // ADCClockConfigSet()
 
-    ADCIntRegister(ADC0_BASE, ADC_SEQ_1, ADC0_SEQ1_ISR); // Registers the ISR with the specific ADC and Sequence.
-    ADCIntEnableEx(ADC0_BASE, ADC_INT_SS1); // Enables Interrupts for specific Sequence
+    ADCSequenceConfigure( ADC1_BASE, ADC_SEQ_1, ADC_TRIGGER_PROCESSOR, 0 );
+    //uint32_t ui32Base, uint32_t ui32SequenceNum, uint32_t ui32Step, uint32_t ui32Config
+    ADCSequenceStepConfigure( ADC1_BASE, ADC_SEQ_1, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH0 | ADC_CTL_END );
+    ADCSequenceEnable( ADC1_BASE, ADC_SEQ_1 );
+
+    ADCIntRegister(ADC1_BASE, ADC_SEQ_1, ADC1_SEQ1_ISR); // Registers the ISR with the specific ADC and Sequence.
+    ADCIntEnableEx(ADC1_BASE, ADC_INT_SS1); // Enables Interrupts for specific Sequence
     // --------------------------------------------------------------------------------------------------------------
     
     // ADC ISENB (Phase B voltage) Config
@@ -306,13 +310,13 @@ void ConfigADCInputs(void)
     //Makes GPIO an INPUT and sets them to be ANALOG
     GPIOPinTypeADC( GPIO_PORTD_BASE, GPIO_PIN_7 );
 
-    ADCSequenceConfigure( ADC0_BASE, ADC_SEQ_2, ADC_TRIGGER_PROCESSOR, 0 );
+    ADCSequenceConfigure( ADC1_BASE, ADC_SEQ_2, ADC_TRIGGER_PROCESSOR, 0 );
     //uint32_t ui32Base, uint32_t ui32SequenceNum, uint32_t ui32Step, uint32_t ui32Config
-    ADCSequenceStepConfigure( ADC0_BASE, ADC_SEQ_2, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END );
-    ADCSequenceEnable( ADC0_BASE, ADC_SEQ_2 );
+    ADCSequenceStepConfigure( ADC1_BASE, ADC_SEQ_2, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END );
+    ADCSequenceEnable( ADC1_BASE, ADC_SEQ_2 );
 
-    ADCIntRegister(ADC0_BASE, ADC_SEQ_2, ADC0_SEQ2_ISR); // Registers the ISR with the specific ADC and Sequence.
-    ADCIntEnableEx(ADC0_BASE, ADC_INT_SS2); // Enables Interrupts for specific Sequence
+    ADCIntRegister(ADC1_BASE, ADC_SEQ_2, ADC1_SEQ2_ISR); // Registers the ISR with the specific ADC and Sequence.
+    ADCIntEnableEx(ADC1_BASE, ADC_INT_SS2); // Enables Interrupts for specific Sequence
 }
 
 /*-----------------------------------------------------------*/
@@ -320,19 +324,19 @@ void ConfigADCInputs(void)
 /* Interrupt handlers */
 
 // ADC ISR for ISENC (Phase C voltage)
-void ADC0_SEQ1_ISR(void) 
+void ADC1_SEQ1_ISR(void) 
 {
     BaseType_t xVoltageSensorTaskWoken;
     xSemaphoreGiveFromISR( xADCSemaphore, &xVoltageSensorTaskWoken);
-    ADCIntClear(ADC0_BASE, ADC_SEQ_1);
+    ADCIntClear(ADC1_BASE, ADC_SEQ_1);
     portYIELD_FROM_ISR( &xVoltageSensorTaskWoken );  
 }
 
 // ADC ISR for ISENB (Phase B voltage)
-void ADC0_SEQ2_ISR(void)
+void ADC1_SEQ2_ISR(void)
 {
     BaseType_t xVoltageSensorTaskWoken;
     xSemaphoreGiveFromISR( xADCSemaphore, &xVoltageSensorTaskWoken);
-    ADCIntClear(ADC0_BASE, ADC_SEQ_2);
+    ADCIntClear(ADC1_BASE, ADC_SEQ_2);
     portYIELD_FROM_ISR( &xVoltageSensorTaskWoken );  
 }
