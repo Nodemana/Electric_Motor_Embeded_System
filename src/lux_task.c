@@ -246,7 +246,7 @@ static void prvReadLightSensor(void *pvParameters)
                 if (filter_data)
                 {
                     filteredValue = movingAverage(lux_int);
-                    UARTprintf("Filtered data: %d\n", filteredValue);
+                    //UARTprintf("Filtered data: %d\n", filteredValue);
                     LuxMsg.SensorReading = filteredValue;
                 }
                 else
@@ -259,7 +259,7 @@ static void prvReadLightSensor(void *pvParameters)
 
                 /* Pull the current time stamp. */
                 LuxMsg.TimeStamp = xTaskGetTickCount();
-                UARTprintf("Sending data: %d\n", LuxMsg.SensorReading);
+                //UARTprintf("Sending data: %d\n", LuxMsg.SensorReading);
                 // // /* Send the entire structure by value to the queue. */
                 xQueueSend(/* The handle of the queue. */
                            xLuxSensorQueue,

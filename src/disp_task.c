@@ -831,7 +831,7 @@ static void prvDisplayTask(void *pvParameters)
                               &(xReceivedMessage),
                               (TickType_t)10) == pdPASS)
                     {
-                        UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
+                        //UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
                     }
                     /* Call update_axis function to scale axis for lux sensor - to be added */
 

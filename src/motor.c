@@ -77,6 +77,7 @@
 #include "motorlib.h"
 
 #define SPEED_FILTER_SIZE 10
+#define TIMER_TICKS_PER_SEC 8
 #define speedQUEUE_LENGTH                    ( 10 )
 
 struct Message
@@ -134,6 +135,7 @@ uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size);
 uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t filter_current_size, uint32_t max_filter_size);
 void ShuffleData(uint32_t *data, uint32_t size);
 
+uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size);
 /*
  * Called by main() to create the Hello print task.
  */
@@ -246,30 +248,42 @@ static void prvSpeedSenseTask( void *pvParameters )
 {
     struct SensorMsg xMessage;
 
-    uint32_t last_revolutions_per_minute = 0;
-    uint32_t revolutions_per_minute_filter[5];
+    //uint32_t last_revolutions_per_minute = 0;
+    uint32_t revolutions_per_minute_filter[SPEED_FILTER_SIZE];
     uint32_t filter_current_size = 0;
+    uint32_t acceleration_RPM_per_second;
+    uint32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
+    uint32_t window_current_size = 0;
+
+    TickType_t time_difference;
+
     for(;;)
     {
         if( xSemaphoreTake(xSpeedSemaphore, portMAX_DELAY) == pdPASS) {
-          
-            revolutions_per_second = (hall_state_counter * 8)/12; // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
+            time_difference = xTaskGetTickCount();
+            time_difference = time_difference / 10000;
+            UARTprintf("Time Difference: %d\n", time_difference);
+
+            revolutions_per_second = (hall_state_counter * TIMER_TICKS_PER_SEC)/12; // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
             
             revolutions_per_minute = revolutions_per_second * 60;
 
             uint32_t filtered_revoltutions_per_minute = FilterData(revolutions_per_minute, revolutions_per_minute_filter, filter_current_size, SPEED_FILTER_SIZE);
-            if (filter_current_size != SPEED_FILTER_SIZE){
+            if (filter_current_size != (SPEED_FILTER_SIZE - 1)){
                 filter_current_size += 1;
             }
-            acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
+            acceleration_RPM_per_second = AccelerationCalculation(revolutions_per_minute, revolutions_per_minute_one_second_window, window_current_size, TIMER_TICKS_PER_SEC); // this is per 8th of a second.
+            if (window_current_size != (TIMER_TICKS_PER_SEC - 1)){
+                window_current_size += 1;
+            }
             //UARTprintf("Hall States: %d\n", hall_state_counter);
             hall_state_counter = 0;
             //UARTprintf("RPS: %d\n", revolutions_per_second);
             //UARTprintf("RPM: %d\n", revolutions_per_minute);
             //UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            //UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
-            last_revolutions_per_minute = revolutions_per_minute;
+            //last_revolutions_per_minute = revolutions_per_minute;
 
             //Message Construction
             xMessage.SensorReading = filtered_revoltutions_per_minute;
@@ -319,6 +333,20 @@ uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size) {
         sum += filter_pointer[i];
     }
     return sum / size;
+}
+
+uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size) {
+    if (window_current_size < max_window_size) {
+        // Buffer is not full, simply add the new data
+        window_pointer[window_current_size] = newData;
+        //UARTprintf("Added Data: %d\n",  filter_pointer[filter_current_size]);
+    } else {
+        // Buffer is full, shuffle data and insert newData
+        ShuffleData(window_pointer, max_window_size);
+        window_pointer[max_window_size - 1] = newData;//
+        //UARTprintf("Added Data: %d\n", filter_pointer[max_filter_size - 1]);
+    }
+    return window_pointer[window_current_size] - window_pointer[0];
 }
 
 
