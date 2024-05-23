@@ -153,7 +153,7 @@ static void prvESTOPTask(void *pvParameters);
 /*
  * PID Controller
  */
-uint16_t PID(int32_t error, uint16_t current_duty_cycle);
+uint32_t PID(int32_t desired_speed, uint32_t current_speed, double time_step);
 
 uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size);
 uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size);
@@ -323,6 +323,9 @@ static void prvSpeedSenseTask(void *pvParameters)
     double revolutions_per_second_double;
     double num_revs;
 
+    // Set speed (to set duty cylce)
+    uint32_t set_speed;
+
     for (;;)
     {
         if (xSemaphoreTake(xSpeedSemaphore, portMAX_DELAY) == pdPASS)
@@ -348,6 +351,10 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             revolutions_per_minute = revolutions_per_second * 60;
 
+            // Update speed using PID
+            uint32_t deired_speed = 500;
+            set_speed = PID(deired_speed, revolutions_per_minute, TimeSinceLastTaskRun);
+            
             uint32_t filtered_revoltutions_per_minute = FilterData(revolutions_per_minute, revolutions_per_minute_filter, speed_filter_current_size, FILTER_SIZE);
             if (speed_filter_current_size != (FILTER_SIZE - 1))
             {
@@ -471,10 +478,16 @@ uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uin
  * PID Controller
  */
 
-uint16_t PID(int32_t error, uint16_t current_duty_cycle)
+uint32_t PID(int32_t desired_speed, uint32_t current_speed, double time_step)
 {
     float gain = 0.2;
-    return round((float)current_duty_cycle + (float)(gain * error));
+    int32_t acceleration = (desired_speed - current_speed) / time_step;
+    if (acceleration > 500)
+    {
+        acceleration = 470;
+    }
+
+    return (uint32_t)round(current_speed + (acceleration * time_step) * gain);
 }
 
 /*-----------------------------------------------------------*/
