@@ -137,6 +137,7 @@ uint32_t acceleration_RPM_per_second = 0;
 
 uint32_t revolutions_per_minute_shared;
 uint32_t acceleration_RPM_per_second_shared;
+double time_step_shared;
 
 enum states motor_control_state = IDLE;
 
@@ -154,6 +155,7 @@ static void prvESTOPTask(void *pvParameters);
  * PID Controller
  */
 uint32_t PID(int32_t desired_speed, uint32_t current_speed, double time_step);
+uint32_t dute_conversion_constant = 1;
 
 uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size);
 uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size);
@@ -219,6 +221,8 @@ static void prvMotorTask(void *pvParameters)
     uint16_t duty_value = 500;
     uint16_t period_value = 10000;
     uint16_t desired_duty = 10000;
+    uint32_t desired_speed = 5000;
+    double TimeStep;
     int32_t motor_error;
 
     uint32_t revolutions_per_minute;
@@ -254,6 +258,7 @@ static void prvMotorTask(void *pvParameters)
         if (xSemaphoreTake(xSharedSpeedWithMotor, 0) == pdPASS) {
                 revolutions_per_minute = revolutions_per_minute_shared;
                 acceleration_RPM_per_second = acceleration_RPM_per_second_shared;
+                TimeStep = time_step_shared;
                 xSemaphoreGive(xSharedSpeedWithMotor);
         }
 
@@ -274,8 +279,10 @@ static void prvMotorTask(void *pvParameters)
             UARTprintf("RPM: %d\n", revolutions_per_minute);
             UARTprintf("RPM/s: %d\n", acceleration_RPM_per_second);
 
-            motor_error = desired_duty - duty_value;
-            duty_value = PID(motor_error, duty_value);
+            // motor_error = desired_duty - duty_value;
+            // duty_value = PID(motor_error, duty_value);
+            desired_speed = 5000; // Eventually will get this from GUI
+            duty_value = PID(desired_speed, revolutions_per_minute, TimeStep) * dute_conversion_constant;
 
             setDuty(duty_value);
             // UARTprintf("Desured Value: %d\n", desired_duty);
@@ -285,9 +292,9 @@ static void prvMotorTask(void *pvParameters)
             break;
         case E_STOPPING:
             desired_duty = 0;
-            motor_error = desired_duty - duty_value;
-            duty_value = PID(motor_error, duty_value);
-
+            // motor_error = desired_duty - duty_value;
+            // duty_value = PID(motor_error, duty_value);
+            duty_value = PID(desired_speed, revolutions_per_minute, TimeStep) * dute_conversion_constant;
             setDuty(duty_value);
             if(motor_error == 0){
                 motor_control_state = IDLE;
@@ -352,8 +359,8 @@ static void prvSpeedSenseTask(void *pvParameters)
             revolutions_per_minute = revolutions_per_second * 60;
 
             // Update speed using PID
-            uint32_t deired_speed = 500;
-            set_speed = PID(deired_speed, revolutions_per_minute, TimeSinceLastTaskRun);
+            // uint32_t deired_speed = 500;
+            // set_speed = PID(deired_speed, revolutions_per_minute, TimeSinceLastTaskRun);
             
             uint32_t filtered_revoltutions_per_minute = FilterData(revolutions_per_minute, revolutions_per_minute_filter, speed_filter_current_size, FILTER_SIZE);
             if (speed_filter_current_size != (FILTER_SIZE - 1))
@@ -380,6 +387,7 @@ static void prvSpeedSenseTask(void *pvParameters)
             if (xSemaphoreTake(xSharedSpeedWithMotor, 0) == pdPASS) {
                 revolutions_per_minute_shared = filtered_revoltutions_per_minute;
                 acceleration_RPM_per_second_shared = filtered_acceleration_RPM_per_second;
+                time_step_shared = TimeSinceLastTaskRun;
                 xSemaphoreGive(xSharedSpeedWithMotor);
             }
 
