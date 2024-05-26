@@ -152,9 +152,13 @@ uint32_t lux_data[NUMBER_DATA_POINTS] = {0};
  *                                      Function Declarations
  * -------------------------------------------------------------------------------------------------
  */
+void init_display( void );
+
 void define_sensor_axis( void );
 
 void clearAxis (int backround_colour );
+
+void plot_data(uint32_t * data_arr, DataRange data_range);
 /*
  * Called by main() to do example specific hardware configurations and to
  * create the Process Switch task.
@@ -732,15 +736,39 @@ void define_sensor_axis( void )
 
 void update_data_array(uint32_t * data_arr, uint32_t new_data)
 {
-
+    if (current_array_size <= (NUMBER_DATA_POINTS - 1))
+    {
+        data_arr[current_array_size] = new_data;
+    }
+    else
+    {
+        for (int i = 0; i < (NUMBER_DATA_POINTS - 1); i++)
+        {
+            data_arr[i] = data_arr[i + 1]; // Shift values down by one index
+        }
+        data_arr[NUMBER_DATA_POINTS - 1] = new_data; // Append new value at the end
+    }
+    UARTprintf("Updated array:\n");
+    for (int i = 0; i < NUMBER_DATA_POINTS; i++) {
+        UARTprintf("%d ", data_arr[i]);
+    }
+    UARTprintf("\n");
 }
 
-//*****************************************************************************
-//
-// A simple demonstration of the features of the TivaWare Graphics Library.
-//
-//*****************************************************************************
-static void prvDisplayTask(void *pvParameters)
+void plot_data(uint32_t * data_arr, DataRange data_range)
+{
+     if (current_array_size <= (NUMBER_DATA_POINTS - 1))
+    {
+        // 
+    }
+    else
+    {
+        //
+    }
+    
+}
+
+void init_display( void )
 {
     tRectangle sRect;
 
@@ -835,7 +863,15 @@ static void prvDisplayTask(void *pvParameters)
     // Issue the initial paint request to the widgets.
     //
     WidgetPaint(WIDGET_ROOT);
-
+}
+//*****************************************************************************
+//
+// A simple demonstration of the features of the TivaWare Graphics Library.
+//
+//*****************************************************************************
+static void prvDisplayTask(void *pvParameters)
+{
+    init_display();
     //
     // Loop forever handling widget messages.
     //
@@ -872,6 +908,10 @@ static void prvDisplayTask(void *pvParameters)
                 // Update data array with new data to plot
                 update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
             }
+            if (current_array_size < NUMBER_DATA_POINTS)
+        {
+            current_array_size++;
+        }
         }
         else
         {
@@ -966,11 +1006,9 @@ static void prvDisplayTask(void *pvParameters)
                 return -1;
                 break;
         }
-        if (current_array_size < NUMBER_DATA_POINTS)
-        {
-            UARTprintf("Current Array Size = %d\n", current_array_size);
-            current_array_size++;
-        }
-        // UARTprintf("Current Array Size = %d\n", current_array_size);
+        // if (current_array_size < NUMBER_DATA_POINTS)
+        // {
+        //     current_array_size++;
+        // }
     }
 }
