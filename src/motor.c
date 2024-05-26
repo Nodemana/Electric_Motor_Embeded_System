@@ -241,15 +241,14 @@ static void prvMotorControllerTask(void *pvParameters)
 {
     int32_t current_speed_RPM = 0;
     int32_t desired_speed_RPM = 0;
-    int32_t acceleration_RPM_per_second = 0;
-    //int32_t integral_error = 0;
+    int32_t integral_error = 0;
 
     for(;;) {
         if(xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS){
             if (xSemaphoreTake(xSharedSpeedWithController, portMAX_DELAY) == pdPASS) {
                     // Receive
                     current_speed_RPM = revolutions_per_minute_shared;
-                    acceleration_RPM_per_second = acceleration_RPM_per_second_shared;
+                    //acceleration_RPM_per_second = acceleration_RPM_per_second_shared;
                     xSemaphoreGive(xSharedSpeedWithController);
             }
             if (xSemaphoreTake(xSharedDutyWithMotor, portMAX_DELAY) == pdPASS) {
@@ -258,7 +257,7 @@ static void prvMotorControllerTask(void *pvParameters)
 
                 // Send
                 next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
-                UARTprintf("Next Duty: %d\n", next_duty_shared);
+                //UARTprintf("Next Duty: %d\n", next_duty_shared);
                 xSemaphoreGive(xSharedDutyWithMotor);
             }
             // UARTprintf("Desired RPM: %d\n", desired_speed_RPM);
@@ -276,12 +275,7 @@ static void prvMotorTask(void *pvParameters)
     uint16_t period_value = 100;
     uint16_t desired_duty = 100;
 
-    int32_t desired_speed_RPM = 8000;
-
-    int32_t motor_error;
-
-    int32_t revolutions_per_minute = 0;
-    int32_t acceleration_RPM_per_second = 0;
+    int32_t desired_speed_RPM = 1500;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
@@ -427,6 +421,8 @@ static void prvSpeedSenseTask(void *pvParameters)
             //     }
             // }
 
+
+            // ACCELERATION
             acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
 
             int32_t filtered_acceleration_RPM_per_second = FilterData(acceleration_RPM_per_second, acceleration_RPM_per_second_filter, acceleration_filter_current_size, FILTER_SIZE);
@@ -435,6 +431,7 @@ static void prvSpeedSenseTask(void *pvParameters)
                 acceleration_filter_current_size += 1;
             }
 
+            // Sharing Data With PID
             if (xSemaphoreTake(xSharedSpeedWithController, 0) == pdPASS) {
                 revolutions_per_minute_shared = filtered_revoltutions_per_minute;
                 acceleration_RPM_per_second_shared = filtered_acceleration_RPM_per_second;
@@ -450,11 +447,11 @@ static void prvSpeedSenseTask(void *pvParameters)
             // }
 
             // DEBUG PRINTS
-            // UARTprintf("Hall States: %d\n", hall_state_counter);
-            // UARTprintf("RPS: %d\n", revolutions_per_second);
+            UARTprintf("Hall States: %d\n", hall_state_counter);
+            UARTprintf("RPS: %d\n", revolutions_per_second);
             UARTprintf("RPM: %d\n", revolutions_per_minute);
             UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 
@@ -538,7 +535,7 @@ int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, uint32
 
 
 uint32_t RPM_to_Duty_Equation(int32_t RPM) {
-    UARTprintf("Conversion: %d\n", (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686)));
+    // UARTprintf("Conversion: %d\n", (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686)));
     return (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686));
 }
 
@@ -548,25 +545,31 @@ uint32_t RPM_to_Duty_Equation(int32_t RPM) {
 
 int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_error_ptr) {
     float Kp = 2;
-    float Ki = 0.5;
-    UARTprintf("Desired RPM: %d\n", desired_speed);
-    UARTprintf("Current RPM: %d\n", current_speed);
+    float Ki = 1;
+    // UARTprintf("Desired RPM: %d\n", desired_speed);
+    // UARTprintf("Current RPM: %d\n", current_speed);
     
     int32_t acceleration = (desired_speed - current_speed);
-    //*integral_error_ptr += acceleration;  // Accumulate the integral error
-    UARTprintf("Acceleration/Error: %d\n", acceleration);
-    //UARTprintf("Integral Error: %d\n", *integral_error_ptr);
-    
-    if (acceleration > 500) {
-        acceleration = 470;
+    *integral_error_ptr += acceleration;  // Accumulate the integral error
+        if (*integral_error_ptr > 100) {
+        *integral_error_ptr = 100;
     }
-    if (acceleration < -500) {
-        acceleration = -470;
+    if (*integral_error_ptr < -100) {
+        *integral_error_ptr = -100;
     }
-    UARTprintf("Minned Acceleration/Error: %d\n", acceleration);
-    UARTprintf("Output: %d\n\n", (int32_t)round(current_speed + (acceleration * Kp))); //  + (*integral_error_ptr * Ki)
+    // UARTprintf("Acceleration/Error: %d\n", acceleration);
+    // UARTprintf("Integral Error: %d\n", *integral_error_ptr);
+    int32_t total_error =acceleration;
+    if (total_error > 500) {
+        total_error = 500;
+    }
+    if (total_error < -500) {
+        total_error = -500;
+    }
+    // UARTprintf("Minned Acceleration/Error: %d\n", total_error);
+    // UARTprintf("Output: %d\n\n", (int32_t)round(current_speed + total_error * Kp + (*integral_error_ptr * Ki))); //  + (*integral_error_ptr * Ki)
 
-    return (int32_t)round(current_speed + (acceleration * Kp) ); // + (*integral_error_ptr * Ki)
+    return (int32_t)round(current_speed + total_error * Kp  + (*integral_error_ptr * Ki)); // + (*integral_error_ptr * Ki)
 }
 
 /*-----------------------------------------------------------*/
