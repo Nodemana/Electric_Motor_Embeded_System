@@ -70,9 +70,11 @@ uint32_t g_ui32SysClock;
 // Semaphores
 SemaphoreHandle_t xADCSemaphore = NULL;
 SemaphoreHandle_t xSpeedSemaphore = NULL;
-SemaphoreHandle_t xSharedSpeedWithMotor = NULL;
+SemaphoreHandle_t xSharedSpeedWithController = NULL;
 SemaphoreHandle_t xSharedSpeedESTOPThreshold = NULL;
 SemaphoreHandle_t xESTOPSemaphore = NULL;
+SemaphoreHandle_t xControllerSemaphore = NULL;
+SemaphoreHandle_t xSharedDutyWithMotor = NULL;
 
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
@@ -95,7 +97,7 @@ static void prvConfigureUART(void);
 static void prvConfigureI2C2(void);
 
 /* Timer configuration */
-static void prvConfigureHWTimer(void);
+static void prvConfigureTimers(void);
 
 /* API to trigger the 'Hello world' task. */
 extern void vCreateCurrentSensorTask( void );
@@ -132,11 +134,22 @@ int main(void)
     xSpeedSemaphore = xSemaphoreCreateBinary();
     xTimerSemaphore = xSemaphoreCreateBinary();
     xESTOPSemaphore = xSemaphoreCreateBinary();
-    xSharedSpeedWithMotor = xSemaphoreCreateMutex();
+    xControllerSemaphore = xSemaphoreCreateBinary();
+
+    xSharedSpeedWithController = xSemaphoreCreateMutex();
     xSharedSpeedESTOPThreshold = xSemaphoreCreateMutex();
+    xSharedDutyWithMotor = xSemaphoreCreateMutex();
 
 
-     if ((xADCSemaphore != NULL) && (xSpeedSemaphore != NULL) && (xTimerSemaphore != NULL) && (xSharedSpeedWithMotor != NULL) && (xSharedSpeedESTOPThreshold != NULL) && (xESTOPSemaphore != NULL))
+     if ((xADCSemaphore != NULL) && 
+        (xSpeedSemaphore != NULL) && 
+        (xTimerSemaphore != NULL) && 
+        (xSharedSpeedWithController != NULL) && 
+        (xSharedSpeedESTOPThreshold != NULL) && 
+        (xESTOPSemaphore != NULL) &&
+        (xControllerSemaphore != NULL) &&
+        (xSharedDutyWithMotor != NULL)
+        )
     {
         vDISPTask();
         vLUXTask();
@@ -213,25 +226,37 @@ static void prvConfigureI2C2(void)
 
 /*-----------------------------------------------------------*/
 
-static void prvConfigureHWTimer(void)
+static void prvConfigureTimers(void)
 {
-    /* The Timer 0 peripheral must be enabled for use. */
+    /* The Timer 2 peripheral must be enabled for use. */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER2);
 
-    /* Configure Timer 0 in full-width periodic mode. */
+    /* Configure Timer 2 in full-width periodic mode. */
     TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC);
 
-    /* Set the Timer 0A load value to run at 10 Hz. */
+    /* Set the Timer 2A load value to run at 10 Hz. */
     TimerLoadSet(TIMER2_BASE, TIMER_A, g_ui32SysClock / 8);
 
-    /* Configure the Timer 0A interrupt for timeout. */
+    /* Configure the Timer 2A interrupt for timeout. */
     TimerIntEnable(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 
-    /* Enable the Timer 0A interrupt in the NVIC. */
+    /* Enable the Timer 2A interrupt in the NVIC. */
     IntEnable(INT_TIMER2A);
 
-     /* Enable Timer 0A. */
+     /* Enable Timer 2A. */
     TimerEnable(TIMER2_BASE, TIMER_A);
+
+    /* Set the Timer 2B load value to run at 10 Hz. */
+    TimerLoadSet(TIMER2_BASE, TIMER_B, g_ui32SysClock / 8);
+
+    /* Configure the Timer 2B interrupt for timeout. */
+    TimerIntEnable(TIMER2_BASE, TIMER_TIMB_TIMEOUT);
+
+    /* Enable the Timer 2B interrupt in the NVIC. */
+    IntEnable(INT_TIMER2B);
+
+     /* Enable Timer 2B. */
+    TimerEnable(TIMER2_BASE, TIMER_B);
 
     // /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
@@ -259,7 +284,7 @@ static void prvSetupHardware(void)
     prvConfigureI2C2();
 
     /* Configure the hardware timer to run in periodic mode. */
-    prvConfigureHWTimer();
+    prvConfigureTimers();
     
     // GPIOPinTypeGPIOInput(GPIO_PORTM_BASE, GPIO_PIN_3);
     // GPIOPinTypeGPIOInput(GPIO_PORTH_BASE, GPIO_PIN_2);

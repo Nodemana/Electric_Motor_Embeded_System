@@ -50,6 +50,7 @@ extern void ADC1_SEQ1_ISR(void);
 extern void ADC1_SEQ2_ISR(void);
 extern void ADC1_SEQ3_ISR(void);
 extern void xTimer2AIntHandler_SpeedTimerISR(void);
+extern void xTimer2BIntHandler_PIDTimerISR(void);
 
 //*****************************************************************************
 //

@@ -112,10 +112,17 @@ enum states
  * -------------------------------------------------------------------------------------------------
  */
 
+// Mutexes
 extern SemaphoreHandle_t xSpeedSemaphore;
-extern SemaphoreHandle_t xSharedSpeedWithMotor;
+extern SemaphoreHandle_t xSharedSpeedWithController;
+extern SemaphoreHandle_t xSharedDutyWithMotor;
 extern SemaphoreHandle_t xSharedSpeedESTOPThreshold;
+extern SemaphoreHandle_t xSharedDutyWithController;
+
+
+// Binary Semaphores
 extern SemaphoreHandle_t xESTOPSemaphore;
+extern SemaphoreHandle_t xControllerSemaphore;
 
 
 extern uint32_t SpeedThreshold;
@@ -131,13 +138,17 @@ int32_t Hall_C;
 
 volatile uint32_t hall_state_counter = 0;
 
-uint32_t revolutions_per_second;
-uint32_t revolutions_per_minute;
-uint32_t acceleration_RPM_per_second = 0;
+//uint32_t revolutions_per_second;
+//uint32_t revolutions_per_minute;
+//uint32_t acceleration_RPM_per_second = 0;
 
 uint32_t revolutions_per_minute_shared;
 uint32_t acceleration_RPM_per_second_shared;
+uint32_t desired_speed_RPM_shared;
+uint32_t next_duty_shared;
 double time_step_shared;
+uint32_t duty_conversion_constant = 10;
+int32_t integral_error = 0;
 
 enum states motor_control_state = IDLE;
 
@@ -149,13 +160,15 @@ enum states motor_control_state = IDLE;
 static void prvMotorTask(void *pvParameters);
 static void prvSpeedSenseTask(void *pvParameters);
 static void prvESTOPTask(void *pvParameters);
+static void prvMotorControllerTask(void *pvParameters);
 
 
 /*
  * PID Controller
  */
-uint32_t PID(int32_t desired_speed, uint32_t current_speed, double time_step);
-uint32_t dute_conversion_constant = 1;
+uint32_t PID(uint32_t desired_speed, uint32_t current_speed, int32_t *integral_error);
+uint32_t RPM_to_Duty_Equation(uint32_t RPM);
+
 
 uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size);
 uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size);
@@ -200,6 +213,13 @@ void vCreateMotorTask(void)
                 tskIDLE_PRIORITY + 1,
                 NULL);
 
+    xTaskCreate(prvMotorControllerTask,
+                "PID",
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                tskIDLE_PRIORITY + 2,
+                NULL);
+
     // xTaskCreate(prvESTOPTask,
     //             "ESTOP",
     //             configMINIMAL_STACK_SIZE,
@@ -211,22 +231,58 @@ void vCreateMotorTask(void)
 
 // static void prvESTOPTask(void *pvParameters)
 // {
+    // for(;;) {
 //     if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
 //         motor_control_state = E_STOPPING;
 //     }
+//}
 // }
+
+static void prvMotorControllerTask(void *pvParameters)
+{
+    uint32_t current_speed_RPM = 0;
+    uint32_t desired_speed_RPM = 0;
+    int32_t acceleration_RPM_per_second = 0;
+    double timestep = 1 / TIMER_TICKS_PER_SEC;
+    //int32_t integral_error = 0;
+
+    for(;;) {
+        if(xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS){
+            if (xSemaphoreTake(xSharedSpeedWithController, portMAX_DELAY) == pdPASS) {
+                    // Receive
+                    current_speed_RPM = revolutions_per_minute_shared;
+                    acceleration_RPM_per_second = acceleration_RPM_per_second_shared;
+                    xSemaphoreGive(xSharedSpeedWithController);
+            }
+            if (xSemaphoreTake(xSharedDutyWithMotor, portMAX_DELAY) == pdPASS) {
+                // Recieve
+                desired_speed_RPM = desired_speed_RPM_shared;
+
+                // Send
+                next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
+                UARTprintf("Next Duty: %d\n", next_duty_shared);
+                xSemaphoreGive(xSharedDutyWithMotor);
+            }
+            // UARTprintf("Desired RPM: %d\n", desired_speed_RPM);
+            // UARTprintf("RPM: %d\n", current_speed_RPM);
+            // UARTprintf("RPM/s: %d\n", acceleration_RPM_per_second);
+            
+
+        }
+    }
+}
 
 static void prvMotorTask(void *pvParameters)
 {
-    uint16_t duty_value = 500;
-    uint16_t period_value = 10000;
-    uint16_t desired_duty = 10000;
-    uint32_t desired_speed = 5000;
-    double TimeStep;
+    uint16_t duty_value = 10;
+    uint16_t period_value = 100;
+    uint16_t desired_duty = 100;
+    uint32_t desired_speed_RPM = 8000;
+
     int32_t motor_error;
 
-    uint32_t revolutions_per_minute;
-    uint32_t acceleration_RPM_per_second;
+    uint32_t revolutions_per_minute = 0;
+    uint32_t acceleration_RPM_per_second = 0;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
@@ -255,12 +311,7 @@ static void prvMotorTask(void *pvParameters)
     enableMotor();
     for (;;)
     {
-        if (xSemaphoreTake(xSharedSpeedWithMotor, 0) == pdPASS) {
-                revolutions_per_minute = revolutions_per_minute_shared;
-                acceleration_RPM_per_second = acceleration_RPM_per_second_shared;
-                TimeStep = time_step_shared;
-                xSemaphoreGive(xSharedSpeedWithMotor);
-        }
+       
 
         switch (motor_control_state)
         {
@@ -276,15 +327,21 @@ static void prvMotorTask(void *pvParameters)
             //};
             break;
         case RUNNING:
-            UARTprintf("RPM: %d\n", revolutions_per_minute);
-            UARTprintf("RPM/s: %d\n", acceleration_RPM_per_second);
+            
 
-            // motor_error = desired_duty - duty_value;
-            // duty_value = PID(motor_error, duty_value);
-            desired_speed = 5000; // Eventually will get this from GUI
-            duty_value = PID(desired_speed, revolutions_per_minute, TimeStep) * dute_conversion_constant;
+            if (xSemaphoreTake(xSharedDutyWithMotor, 0) == pdPASS) {
+                // Recieve
+                setDuty(next_duty_shared);
+                // if (duty_value < desired_duty){
+                //     duty_value += 1;
+                // }
+                // setDuty(duty_value);
 
-            setDuty(duty_value);
+                // Send
+                desired_speed_RPM_shared = desired_speed_RPM;
+                xSemaphoreGive(xSharedDutyWithMotor);
+            }
+
             // UARTprintf("Desured Value: %d\n", desired_duty);
             // UARTprintf("Error Value: %d\n", motor_error);
 
@@ -294,11 +351,11 @@ static void prvMotorTask(void *pvParameters)
             desired_duty = 0;
             // motor_error = desired_duty - duty_value;
             // duty_value = PID(motor_error, duty_value);
-            duty_value = PID(desired_speed, revolutions_per_minute, TimeStep) * dute_conversion_constant;
-            setDuty(duty_value);
-            if(motor_error == 0){
-                motor_control_state = IDLE;
-            }
+            // duty_value = PID(desired_speed_RPM, revolutions_per_minute, TimeStep) * duty_conversion_constant;
+            setDuty(desired_duty);
+            // if(motor_error == 0){
+            //     motor_control_state = IDLE;
+            // }
             break;
         default:
             return -1;
@@ -318,8 +375,8 @@ static void prvSpeedSenseTask(void *pvParameters)
     uint32_t acceleration_RPM_per_second_filter[FILTER_SIZE];
     uint32_t acceleration_filter_current_size = 0;
 
-    uint32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
-    uint32_t window_current_size = 0;
+    //uint32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
+    //uint32_t window_current_size = 0;
 
     // TickType_t time_difference;
     TickType_t TickCount_Prev = 0;
@@ -329,9 +386,6 @@ static void prvSpeedSenseTask(void *pvParameters)
     double TimeSinceLastTaskRun;
     double revolutions_per_second_double;
     double num_revs;
-
-    // Set speed (to set duty cylce)
-    uint32_t set_speed;
 
     for (;;)
     {
@@ -349,25 +403,23 @@ static void prvSpeedSenseTask(void *pvParameters)
             // TimeSinceLastTaskRun = (double)TickCount_Curr / configTICK_RATE_HZ;
 
             num_revs = ((double)hall_state_counter / 12.0);
+            hall_state_counter = 0;
 
             //UARTprintf("Number of revs: %d\n", (int)num_revs);
 
             revolutions_per_second_double = num_revs / TimeSinceLastTaskRun;
 
-            revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
+            uint32_t revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
 
-            revolutions_per_minute = revolutions_per_second * 60;
+            uint32_t revolutions_per_minute = revolutions_per_second * 60;
 
-            // Update speed using PID
-            // uint32_t deired_speed = 500;
-            // set_speed = PID(deired_speed, revolutions_per_minute, TimeSinceLastTaskRun);
-            
             uint32_t filtered_revoltutions_per_minute = FilterData(revolutions_per_minute, revolutions_per_minute_filter, speed_filter_current_size, FILTER_SIZE);
             if (speed_filter_current_size != (FILTER_SIZE - 1))
             {
                 speed_filter_current_size += 1;
             }
 
+            // ESTOP CODE
             // if(xSemaphoreTake(xSharedSpeedESTOPThreshold, 0) == pdPASS)
             // {
             //     if(filtered_revoltutions_per_minute > SpeedThreshold){
@@ -384,22 +436,25 @@ static void prvSpeedSenseTask(void *pvParameters)
                 acceleration_filter_current_size += 1;
             }
 
-            if (xSemaphoreTake(xSharedSpeedWithMotor, 0) == pdPASS) {
+            if (xSemaphoreTake(xSharedSpeedWithController, 0) == pdPASS) {
                 revolutions_per_minute_shared = filtered_revoltutions_per_minute;
                 acceleration_RPM_per_second_shared = filtered_acceleration_RPM_per_second;
                 time_step_shared = TimeSinceLastTaskRun;
-                xSemaphoreGive(xSharedSpeedWithMotor);
+                xSemaphoreGive(xSharedSpeedWithController);
             }
+            xSemaphoreGive(xControllerSemaphore);
 
+            // ANOTHER METHOD FOR ACCELERATION
             // = AccelerationCalculation(revolutions_per_minute, revolutions_per_minute_one_second_window, window_current_size, TIMER_TICKS_PER_SEC); // this is per 8th of a second.
             // if (window_current_size != (TIMER_TICKS_PER_SEC - 1)){
             //     window_current_size += 1;
             // }
+
+            // DEBUG PRINTS
             // UARTprintf("Hall States: %d\n", hall_state_counter);
-            hall_state_counter = 0;
             // UARTprintf("RPS: %d\n", revolutions_per_second);
-            // UARTprintf("RPM: %d\n", revolutions_per_minute);
-            // UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            UARTprintf("RPM: %d\n", revolutions_per_minute);
+            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
             // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
@@ -482,20 +537,37 @@ uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uin
     return window_pointer[window_current_size - 1] - window_pointer[0];
 }
 
+
+uint32_t RPM_to_Duty_Equation(uint32_t RPM) {
+    UARTprintf("Conversion: %d", (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686)));
+    return (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686));
+}
+
 /*
  * PID Controller
  */
 
-uint32_t PID(int32_t desired_speed, uint32_t current_speed, double time_step)
-{
-    float gain = 0.2;
-    int32_t acceleration = (desired_speed - current_speed) / time_step;
-    if (acceleration > 500)
-    {
+uint32_t PID(uint32_t desired_speed, uint32_t current_speed, int32_t *integral_error_ptr) {
+    float Kp = 2;
+    //float Ki = 0.1;
+    UARTprintf("Desired RPM: %d\n", desired_speed);
+    UARTprintf("Current RPM: %d\n", current_speed);
+    
+    int32_t acceleration = (desired_speed - current_speed);
+    //*integral_error_ptr += acceleration;  // Accumulate the integral error
+    UARTprintf("Acceleration/Error: %d\n", acceleration);
+    //UARTprintf("Integral Error: %d\n", *integral_error_ptr);
+    
+    if (acceleration > 500) {
         acceleration = 470;
     }
+    if (acceleration < -500) {
+        acceleration = -470;
+    }
+    UARTprintf("Minned Acceleration/Error: %d\n", acceleration);
+    UARTprintf("Output: %d\n\n", (uint32_t)round(current_speed + (acceleration) * Kp)); //(*integral_error_ptr * Ki)
 
-    return (uint32_t)round(current_speed + (acceleration * time_step) * gain);
+    return (uint32_t)round(current_speed + (acceleration * Kp)); //(*integral_error_ptr * Ki)
 }
 
 /*-----------------------------------------------------------*/
@@ -525,7 +597,7 @@ void HallSensorHandler(void)
 }
 
 /*
- Timer ISR
+ Timer 2A ISR
 */
 void xTimer2AIntHandler_SpeedTimerISR(void)
 {
@@ -539,3 +611,19 @@ void xTimer2AIntHandler_SpeedTimerISR(void)
     //  /* Clear the hardware interrupt flag for Timer 0A. */
     TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 }
+
+/*
+ Timer 2B ISR
+*/
+// void xTimer2BIntHandler_PIDTimerISR(void)
+// {
+//     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+//     // Give the semaphore to unblock the task.
+//     xSemaphoreGiveFromISR(xControllerSemaphore, &xHigherPriorityTaskWoken);
+//     // Perform a context switch if needed.
+//     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+//     // Clear the timer interrupt.
+//     //  /* Clear the hardware interrupt flag for Timer 0A. */
+//     TimerIntClear(TIMER2_BASE, TIMER_TIMB_TIMEOUT);
+// }
