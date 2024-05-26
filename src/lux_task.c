@@ -117,7 +117,7 @@ uint16_t movingAverage(uint16_t newValue);
 
 /* Timer Functions */
 void vTimerCallback(TimerHandle_t xTimer); // Handles the timer interupt
-void vSoftwareTimer( void ); // Software timer
+void vLuxSoftwareTimer( void ); // Software timer
 
 /*
  * Handles when Timer0A ends.
@@ -146,7 +146,7 @@ void vLUXTask(void)
                 NULL);                      // Task handler
 
     /* Set up the software timer */
-    vSoftwareTimer();
+    vLuxSoftwareTimer();
 }
 
 
@@ -170,7 +170,7 @@ uint16_t movingAverage(uint16_t newValue)
 }
 
 /*-----------------------------------------------------------*/
-void vSoftwareTimer( void )
+void vLuxSoftwareTimer( void )
 {
     // Create a timer
     TimerHandle_t xTimer = xTimerCreate(
