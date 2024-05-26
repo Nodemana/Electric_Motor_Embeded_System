@@ -113,7 +113,7 @@ float CalculateCurrent(float);
 
 void ADC1_SEQ1_ISR(void);
 void ADC1_SEQ2_ISR(void);
-// void ADC0_SEQ3_ISR(void);
+// void ADC1_SEQ3_ISR(void);
 
 /*-----------------------------------------------------------*/
 
@@ -176,7 +176,6 @@ static void prvCurrentSensorTask( void *pvParameters) {
         }
 
         ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_2);
-        ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_2);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC1_BASE, ADC_SEQ_2, &ui32Value); // Read the value from the ADC.
@@ -190,22 +189,27 @@ static void prvCurrentSensorTask( void *pvParameters) {
         phase_A_raw_est = (TWELVE_BIT_MAX * 3/2 )-(phase_B_raw + phase_C_raw);
 
         uint16_t raw_Vs[] = {phase_A_raw_est, phase_B_raw, phase_C_raw};
-        // char phase_letters[] = {'A', 'B', 'C'};
+        char phase_letters[] = {'A', 'B', 'C'};
         float currents[3];
         // Step 4: Convert voltage to current in Amps
         for(uint32_t i = 0; i < 3; i++)
         {
             float voltage = MapVoltage(raw_Vs[i]);
             currents[i] = CalculateCurrent(voltage);
-            // char voltage_msg[14] = "\t Voltage: %f";
-            // char current_msg[14] = "\t Current: %f";
-            // UARTprintf("\nPhase %c: ", phase_letters[i]);
-            // UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
+            char voltage_msg[14] = "\t Voltage: %f";
+            char current_msg[14] = "\t Current: %f";
+            UARTprintf("\nPhase %c: ", phase_letters[i]);
+            UARTprintf("\t raw: %d", raw_Vs[i]);
+            UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
             // UartPrintFloat(current_msg, sizeof(current_msg), currents[i]);
+            int32_t curr = (int32_t)(currents[i] * 100);
+            UARTprintf("\t Current: %d", curr);
         }
 
-        float total_cur = currents[0] + currents[1] + currents[2];
-        float power = total_cur * 20 * 1.732;
+        float total_cur =  fabsf(currents[0]) + fabsf(currents[1]) + fabsf(currents[2]);
+        char current_msg[12] = "\n Current: %f";
+        UartPrintFloat(current_msg, sizeof(current_msg), total_cur);
+        float power = total_cur * 20; //* 1.732;
         char power_msg[18] = "\n Total power: %f\n";
         UartPrintFloat(power_msg, sizeof(power_msg), power);
         msg.ClaclulatedData = power;
@@ -288,7 +292,7 @@ float CalculateCurrent(float voltage)
     float G_SCA = 10.;
     float R_SENSE = 0.007;
 
-    return ((VREF / 2) - voltage)/(G_SCA * R_SENSE);
+    return ((VREF / 2) - (voltage))/(G_SCA * R_SENSE);
 }
 
 float CalculatePower(float current)

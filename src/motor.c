@@ -262,7 +262,7 @@ static void prvSpeedSenseTask( void *pvParameters )
         if( xSemaphoreTake(xSpeedSemaphore, portMAX_DELAY) == pdPASS) {
             time_difference = xTaskGetTickCount();
             time_difference = time_difference / 10000;
-            UARTprintf("Time Difference: %d\n", time_difference);
+            // UARTprintf("Time Difference: %d\n", time_difference);
 
             revolutions_per_second = (hall_state_counter * TIMER_TICKS_PER_SEC)/12; // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
             
@@ -281,7 +281,7 @@ static void prvSpeedSenseTask( void *pvParameters )
             //UARTprintf("RPS: %d\n", revolutions_per_second);
             //UARTprintf("RPM: %d\n", revolutions_per_minute);
             //UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             //last_revolutions_per_minute = revolutions_per_minute;
 
