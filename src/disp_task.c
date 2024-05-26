@@ -145,12 +145,19 @@ typedef struct
 } DataRange;
 
 DataRange Lux_Data_Range;
+DataRange Temp_Data_Range;
+DataRange Power_Data_Range;
+DataRange Speed_Data_Range;
 
 uint8_t current_array_size = 0;
 
 /* Initialise Data Arrays for plotting */
 uint32_t lux_data[NUMBER_DATA_POINTS] = {0};
+uint32_t temp_data[NUMBER_DATA_POINTS] = {0};
+uint32_t power_data[NUMBER_DATA_POINTS] = {0};
+uint32_t speed_data[NUMBER_DATA_POINTS] = {0};
 
+bool state_changed = false;
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
  * -------------------------------------------------------------------------------------------------
@@ -159,7 +166,10 @@ void init_display( void );
 
 void define_sensor_axis( void );
 
+void update_data_arrays(void);
+void update_data_arrays(void);
 void clearAxis (int backround_colour );
+void clearScreen (int backround_colour );
 
 void plot_data(uint32_t * data_arr, DataRange data_range);
 /*
@@ -215,7 +225,7 @@ void vDISPTask(void)
                 "PLOT",
                 configMINIMAL_STACK_SIZE,
                 NULL,
-                tskIDLE_PRIORITY + 2,
+                tskIDLE_PRIORITY + 3,
                 NULL);
 
     /* Set up the software timer */
@@ -705,11 +715,25 @@ void OnRadioChange(tWidget *psWidget, uint32_t bSelected)
         }
     }
     selected_sensor = sensors[ui32Idx];
-
-    if (selected_sensor == LUX)
-    {
-        xyPlaneDraw(Lux_Data_Range, false);
-    }
+    // Clear sceeen for new axis
+    // clearScreen(ClrWhite);
+    state_changed = true;
+    // if (selected_sensor == LUX)
+    // {
+    //     xyPlaneDraw(Lux_Data_Range, false);
+    // }
+    // else if (selected_sensor == TEMP)
+    // {
+    //     xyPlaneDraw(Temp_Data_Range, false);
+    // }
+    // else if (selected_sensor == POWER)
+    // {
+    //     xyPlaneDraw(Power_Data_Range, false);
+    // }
+    // else if (selected_sensor == SPEED)
+    // {
+    //     xyPlaneDraw(Speed_Data_Range, false);
+    // }
 }
 
 //*****************************************************************************
@@ -722,7 +746,6 @@ void xyPlaneDraw(DataRange data_range, bool grid_on)
     // 
     GrContextForegroundSet(&sContext, ClrDarkBlue); // Set colour to dark blue
     char cstr[10];
-
     // Draw y axix
     GrLineDrawV(&sContext, X_AXIS_ORIGIN, Y_AXIS_ORIGIN, (Y_AXIS_ORIGIN - Y_AXIS_LENGTH));
      // Draw x axis
@@ -748,6 +771,17 @@ void clearAxis (int backround_colour )
     sRect.i16YMin = Y_AXIS_ORIGIN - 1;
     sRect.i16XMax = X_AXIS_ORIGIN + X_AXIS_LENGTH + 1;
     sRect.i16YMax = Y_AXIS_ORIGIN - Y_AXIS_LENGTH - 5;
+    GrContextForegroundSet(&sContext, ClrWhite);
+    GrRectFill(&sContext, &sRect);
+}
+
+void clearScreen (int backround_colour )
+{
+    tRectangle sRect;
+    sRect.i16XMin = X_AXIS_ORIGIN - 33;
+    sRect.i16YMin = Y_AXIS_ORIGIN + 6.5;
+    sRect.i16XMax = X_AXIS_ORIGIN + X_AXIS_LENGTH + 5;
+    sRect.i16YMax = Y_AXIS_ORIGIN - Y_AXIS_LENGTH - 8.5;
     GrContextForegroundSet(&sContext, ClrWhite);
     GrRectFill(&sContext, &sRect);
 }
@@ -782,19 +816,21 @@ void plot_data(uint32_t * data_arr, DataRange data_range)
 {
     uint32_t y_step_size = (data_range.max - data_range.min) / Y_AXIS_LENGTH;
     uint32_t x_time_step = (X_AXIS_LENGTH / NUMBER_DATA_POINTS);
-    uint32_t y_data, x_data;
-    uint32_t prev_x_data;
-    uint32_t prev_y_data;
+    uint32_t y_data = 0; 
+    uint32_t x_data = 0;
+    uint32_t prev_x_data = 0;
+    uint32_t prev_y_data = 0;
 
     // Check if moving graph window should start
     if (current_array_size <= (NUMBER_DATA_POINTS - 1))
     {
         clearAxis(ClrWhite);
         GrContextForegroundSet(&sContext, ClrDarkBlue);
+        UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
         for (int i = 0; i < current_array_size; i++)
         {
             x_data = X_AXIS_ORIGIN + (x_time_step * i) + 15;
-            if (data_arr[i] > data_range.max) 
+            if (data_arr[i] >= data_range.max) 
             {
                 y_data = Y_AXIS_ORIGIN - Y_AXIS_LENGTH;
             }
@@ -837,7 +873,6 @@ void plot_data(uint32_t * data_arr, DataRange data_range)
             prev_y_data = y_data;
         }
     }
-    
 }
 
 void init_display( void )
@@ -936,6 +971,94 @@ void init_display( void )
     //
     WidgetPaint(WIDGET_ROOT);
 }
+
+void update_data_arrays(void)
+{
+    const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
+    EventBits_t DisplayBits;
+    SensorMsg xReceivedMessage;
+    SensorMsg xLuxReceivedMessage;
+    SensorMsg xTempReceivedMessage;
+    SensorMsg xPowerReceivedMessage;
+    SensorMsg xSpeedReceivedMessage;
+
+    /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
+    DisplayBits = xEventGroupWaitBits(xSensorEventGroup,   /* The event group being tested. */
+                                LUX_DATA_READY | TEMP_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY, /* The bits within the event group to wait for. */
+                                pdTRUE,        /* BIT_0 & BIT_4 should be cleared before returning. */
+                                pdFALSE,       /* Don't wait for both bits, either bit will do. */
+                                xTicksToWait); /* Wait a maximum of 100ms for either bit to be set. */
+
+    /**** Update the data arrays of each sensor for plotting ****/
+    /*** LUX ***/
+    if ( ( ( DisplayBits & (LUX_DATA_READY) ) == (LUX_DATA_READY) ) )
+    {
+        if (xQueueReceive(xLuxSensorQueue,
+                    &(xLuxReceivedMessage),
+                    (TickType_t)10) == pdPASS)
+        {
+            // Update data array with new data to plot
+            update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
+        }
+    }
+    else if (current_array_size > 0)
+    {
+        // Update data array with old data to plot
+        update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
+    }
+
+    /*** TEMP ***/
+    if ( ( ( DisplayBits & (TEMP_DATA_READY) ) == (TEMP_DATA_READY) ) )
+    {
+        if (xQueueReceive(xTempSensorQueue,
+                    &(xTempReceivedMessage),
+                    (TickType_t)10) == pdPASS)
+        {
+            // Update data array with new data to plot
+            // update_data_array(temp_data, xTempReceivedMessage.SensorReading);
+        }
+    }
+    else if (current_array_size > 0)
+    {
+        // Update data array with old data to plot
+        // update_data_array(temp_data, xTempReceivedMessage.SensorReading);
+    }
+
+    /*** POWER ***/
+    if ( ( ( DisplayBits & (POWER_DATA_READY) ) == (POWER_DATA_READY) ) )
+    {
+        if (xQueueReceive(xPowerSensorQueue,
+                    &(xPowerReceivedMessage),
+                    (TickType_t)10) == pdPASS)
+        {
+            // Update data array with new data to plot
+            // update_data_array(power_data, xPowerReceivedMessage.SensorReading);
+        }
+    }
+    else if (current_array_size > 0)
+    {
+        // Update data array with old data to plot
+        // update_data_array(power_data, xPowerReceivedMessage.SensorReading);
+    }
+
+    /*** SPEED ***/
+    if ( ( ( DisplayBits & (SPEED_DATA_READY) ) == (SPEED_DATA_READY) ) )
+    {
+        if (xQueueReceive(xSpeedSensorQueue,
+                    &(xSpeedReceivedMessage),
+                    (TickType_t)10) == pdPASS)
+        {
+            // Update data array with new data to plot
+            // update_data_array(speed_data, xSpeedReceivedMessage.SensorReading);
+        }
+    }
+    else if (current_array_size > 0)
+    {
+        // Update data array with old data to plot
+        // update_data_array(speed_data, xSpeedReceivedMessage.SensorReading);
+    }
+
+}
 //*****************************************************************************
 //
 // A simple demonstration of the features of the TivaWare Graphics Library.
@@ -960,126 +1083,70 @@ static void prvDisplayTask(void *pvParameters)
 static void prvPlotTask(void *pvParameters)
 {
     //
-    const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
-    EventBits_t DisplayBits;
-    SensorMsg xReceivedMessage;
-    SensorMsg xLuxReceivedMessage;
+    
     selected_sensor = NONE;
     char cstr[10];
 
     // Data range structs
+    // Lux data ranges
     Lux_Data_Range.max = 200;
     Lux_Data_Range.min = 0;
+
+    Temp_Data_Range.max = 50;
+    Temp_Data_Range.min = 0;
+
+    Power_Data_Range.max = 100;
+    Power_Data_Range.min = 0;
+
+    Speed_Data_Range.max = 900;
+    Speed_Data_Range.min = 0;
     for (;;)
     {
         if (xSemaphoreTake(xPlotTimerSemaphore, portMAX_DELAY) == pdPASS)
         {
-            /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
-            EventBits_t DisplayBits = xEventGroupWaitBits(xSensorEventGroup,   /* The event group being tested. */
-                                        LUX_DATA_READY | TEMP_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY, /* The bits within the event group to wait for. */
-                                        pdTRUE,        /* BIT_0 & BIT_4 should be cleared before returning. */
-                                        pdFALSE,       /* Don't wait for both bits, either bit will do. */
-                                        xTicksToWait); /* Wait a maximum of 100ms for either bit to be set. */
-
-            /* Update the data arrays of each sensor for plotting */
-            if ( ( ( DisplayBits & (LUX_DATA_READY) ) == (LUX_DATA_READY) ) )
-            {
-                if (xQueueReceive(xLuxSensorQueue,
-                            &(xLuxReceivedMessage),
-                            (TickType_t)10) == pdPASS)
-                {
-                    // Update data array with new data to plot
-                    update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
-                }
-            }
-            else if (current_array_size > 0)
-            {
-                // Update data array with old data to plot
-                update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
-            }
+            // Update data arrays
+            update_data_arrays();
             // Handle the current state
             switch (selected_sensor) 
             {
                 case LUX:
-                plot_data(lux_data, Lux_Data_Range);
-                    // If Lux is selected, plot data
-
-
-
-                    // if ( ( ( DisplayBits & (LUX_DATA_READY) ) == (LUX_DATA_READY) ) )
-                    // {
-                    //     // if (xQueueReceive(xLuxSensorQueue,
-                    //     //           &(xReceivedMessage),
-                    //     //           (TickType_t)10) == pdPASS)
-                    //     // {
-                    //     //     //UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
-                    //     // }
-                    //     // /* Call update_axis function to scale axis for lux sensor - to be added */
-
-                    //     // /* Plot the lux data by calling a plot_data function - to be added */
-                    //     // usprintf(cstr, "Lux: %d", xReceivedMessage.SensorReading);
-                    //     // clearAxis(ClrWhite);
-
-                    //     // //
-                    //     // // Put the application name in the middle of the banner.
-                    //     // //
-                    //     // GrContextForegroundSet(&sContext, ClrDarkBlue);
-                    //     // GrContextFontSet(&sContext, &g_sFontCm20);
-                    //     // GrStringDrawCentered(&sContext, cstr, -1,
-                    //     //                     Y_AXIS_ORIGIN - Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
-                    // }
+                    if (state_changed)
+                    {
+                        clearScreen(ClrWhite);
+                        xyPlaneDraw(Lux_Data_Range, false);
+                        state_changed = false;
+                    }
+                    plot_data(lux_data, Lux_Data_Range);
                     break;
 
                 case TEMP:
-                    if ( ( ( DisplayBits & (TEMP_DATA_READY) ) == (TEMP_DATA_READY) ) )
+                    if (state_changed)
                     {
-                        // Plot the data
+                        clearScreen(ClrWhite);
+                        xyPlaneDraw(Temp_Data_Range, false);
+                        state_changed = false;
                     }
-                    clearAxis(ClrWhite);
-                    //
-                    // Put the application name in the middle of the banner.
-                    //
-                    GrContextForegroundSet(&sContext, ClrDarkBlue);
-                    GrContextFontSet(&sContext, &g_sFontCm20);
-                    GrStringDrawCentered(&sContext, "Temp: ", -1,
-                                        Y_AXIS_ORIGIN - Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                    plot_data(temp_data, Temp_Data_Range);
                     break;
 
                 case POWER:
-                    if ( ( ( DisplayBits & (POWER_DATA_READY) ) == (POWER_DATA_READY) ) )
+                    if (state_changed)
                     {
-                        // Plot the data
+                        clearScreen(ClrWhite);
+                        xyPlaneDraw(Power_Data_Range, false);
+                        state_changed = false;
                     }
-                    clearAxis(ClrWhite);
-                    GrContextForegroundSet(&sContext, ClrDarkBlue);
-                    GrContextFontSet(&sContext, &g_sFontCm20);
-                    GrStringDrawCentered(&sContext, "Power: ", -1,
-                                        Y_AXIS_ORIGIN - Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                    plot_data(power_data, Power_Data_Range);
                     break;
                     
                 case SPEED:
-                    if ( ( ( DisplayBits & (SPEED_DATA_READY) ) == (SPEED_DATA_READY) ) )
+                    if (state_changed)
                     {
-                        if (xQueueReceive(xSpeedSensorQueue,
-                                &(xReceivedMessage),
-                                (TickType_t)10) == pdPASS)
-                        {
-                            UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
-                        }
-                        /* Call update_axis function to scale axis for lux sensor - to be added */
-
-                        /* Plot the lux data by calling a plot_data function - to be added */
-                        usprintf(cstr, "Speed: %d", xReceivedMessage.SensorReading);
-                        clearAxis(ClrWhite);
-
-                        //
-                        // Put the application name in the middle of the banner.
-                        //
-                        GrContextForegroundSet(&sContext, ClrDarkBlue);
-                        GrContextFontSet(&sContext, &g_sFontCm20);
-                        GrStringDrawCentered(&sContext, cstr, -1,
-                                            Y_AXIS_ORIGIN - Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                        clearScreen(ClrWhite);
+                        xyPlaneDraw(Speed_Data_Range, false);
+                        state_changed = false;
                     }
+                    plot_data(speed_data, Speed_Data_Range);
                     break;
                 
                 case NONE:
@@ -1130,9 +1197,6 @@ void vPlotSoftwareTimer( void )
 /* Timer Call Back function */
 void vPlotTimerCallback(TimerHandle_t xPlotTimer)
 {
-    // Toggle an LED or perform any other task
-    UARTprintf("Plot Timer Callback Executed\n");
-
     BaseType_t xPlotTaskWoken;
 
     /* Initialize the xLUXTaskWoken as pdFALSE.  This is required as the
