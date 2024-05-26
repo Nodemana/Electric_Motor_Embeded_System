@@ -142,12 +142,11 @@ volatile uint32_t hall_state_counter = 0;
 //uint32_t revolutions_per_minute;
 //uint32_t acceleration_RPM_per_second = 0;
 
-uint32_t revolutions_per_minute_shared;
-uint32_t acceleration_RPM_per_second_shared;
-uint32_t desired_speed_RPM_shared;
+int32_t revolutions_per_minute_shared;
+int32_t acceleration_RPM_per_second_shared;
+int32_t desired_speed_RPM_shared;
 uint32_t next_duty_shared;
 double time_step_shared;
-uint32_t duty_conversion_constant = 10;
 int32_t integral_error = 0;
 
 enum states motor_control_state = IDLE;
@@ -166,15 +165,15 @@ static void prvMotorControllerTask(void *pvParameters);
 /*
  * PID Controller
  */
-uint32_t PID(uint32_t desired_speed, uint32_t current_speed, int32_t *integral_error);
-uint32_t RPM_to_Duty_Equation(uint32_t RPM);
+int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_error);
+uint32_t RPM_to_Duty_Equation(int32_t RPM);
 
 
-uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size);
-uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size);
-void ShuffleData(uint32_t *data, uint32_t size);
+int32_t GetAverage(int32_t *filter_pointer, uint32_t size);
+int32_t FilterData(int32_t newData, int32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size);
+void ShuffleData(int32_t *data, uint32_t size);
 
-uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size);
+int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size);
 /*
  * Called by main() to create the Hello print task.
  */
@@ -240,10 +239,9 @@ void vCreateMotorTask(void)
 
 static void prvMotorControllerTask(void *pvParameters)
 {
-    uint32_t current_speed_RPM = 0;
-    uint32_t desired_speed_RPM = 0;
+    int32_t current_speed_RPM = 0;
+    int32_t desired_speed_RPM = 0;
     int32_t acceleration_RPM_per_second = 0;
-    double timestep = 1 / TIMER_TICKS_PER_SEC;
     //int32_t integral_error = 0;
 
     for(;;) {
@@ -277,12 +275,13 @@ static void prvMotorTask(void *pvParameters)
     uint16_t duty_value = 10;
     uint16_t period_value = 100;
     uint16_t desired_duty = 100;
-    uint32_t desired_speed_RPM = 8000;
+
+    int32_t desired_speed_RPM = 8000;
 
     int32_t motor_error;
 
-    uint32_t revolutions_per_minute = 0;
-    uint32_t acceleration_RPM_per_second = 0;
+    int32_t revolutions_per_minute = 0;
+    int32_t acceleration_RPM_per_second = 0;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
@@ -367,13 +366,13 @@ static void prvSpeedSenseTask(void *pvParameters)
 {
     struct SensorMsg xMessage;
 
-    uint32_t last_revolutions_per_minute = 0;
-    uint32_t revolutions_per_minute_filter[FILTER_SIZE];
-    uint32_t speed_filter_current_size = 0;
+    int32_t last_revolutions_per_minute = 0;
+    int32_t revolutions_per_minute_filter[FILTER_SIZE];
+    int32_t speed_filter_current_size = 0;
 
-    uint32_t acceleration_RPM_per_second;
-    uint32_t acceleration_RPM_per_second_filter[FILTER_SIZE];
-    uint32_t acceleration_filter_current_size = 0;
+    int32_t acceleration_RPM_per_second;
+    int32_t acceleration_RPM_per_second_filter[FILTER_SIZE];
+    int32_t acceleration_filter_current_size = 0;
 
     //uint32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
     //uint32_t window_current_size = 0;
@@ -409,11 +408,11 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             revolutions_per_second_double = num_revs / TimeSinceLastTaskRun;
 
-            uint32_t revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
+            int32_t revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
 
-            uint32_t revolutions_per_minute = revolutions_per_second * 60;
+            int32_t revolutions_per_minute = revolutions_per_second * 60;
 
-            uint32_t filtered_revoltutions_per_minute = FilterData(revolutions_per_minute, revolutions_per_minute_filter, speed_filter_current_size, FILTER_SIZE);
+            int32_t filtered_revoltutions_per_minute = FilterData(revolutions_per_minute, revolutions_per_minute_filter, speed_filter_current_size, FILTER_SIZE);
             if (speed_filter_current_size != (FILTER_SIZE - 1))
             {
                 speed_filter_current_size += 1;
@@ -430,7 +429,7 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
 
-            uint32_t filtered_acceleration_RPM_per_second = FilterData(acceleration_RPM_per_second, acceleration_RPM_per_second_filter, acceleration_filter_current_size, FILTER_SIZE);
+            int32_t filtered_acceleration_RPM_per_second = FilterData(acceleration_RPM_per_second, acceleration_RPM_per_second_filter, acceleration_filter_current_size, FILTER_SIZE);
             if (acceleration_filter_current_size != (FILTER_SIZE - 1))
             {
                 acceleration_filter_current_size += 1;
@@ -482,7 +481,7 @@ static void prvSpeedSenseTask(void *pvParameters)
     }
 }
 
-void ShuffleData(uint32_t *data, uint32_t size)
+void ShuffleData(int32_t *data, uint32_t size)
 {
     // Shift all elements to the left by one position
     for (uint32_t i = 0; i < size - 1; ++i)
@@ -491,7 +490,7 @@ void ShuffleData(uint32_t *data, uint32_t size)
     }
 }
 
-uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size)
+int32_t FilterData(int32_t newData, int32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size)
 {
     if (speed_filter_current_size < (max_filter_size - 1))
     {
@@ -509,9 +508,9 @@ uint32_t FilterData(uint32_t newData, uint32_t *filter_pointer, uint32_t speed_f
     return GetAverage(filter_pointer, speed_filter_current_size);
 }
 
-uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size)
+int32_t GetAverage(int32_t *filter_pointer, uint32_t size)
 {
-    uint32_t sum = 0;
+    int32_t sum = 0;
     for (uint32_t i = 0; i < size; ++i)
     {
         sum += filter_pointer[i];
@@ -519,7 +518,7 @@ uint32_t GetAverage(uint32_t *filter_pointer, uint32_t size)
     return sum / size;
 }
 
-uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size)
+int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size)
 {
     if (window_current_size < (max_window_size - 1))
     {
@@ -538,8 +537,8 @@ uint32_t AccelerationCalculation(uint32_t newData, uint32_t *window_pointer, uin
 }
 
 
-uint32_t RPM_to_Duty_Equation(uint32_t RPM) {
-    UARTprintf("Conversion: %d", (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686)));
+uint32_t RPM_to_Duty_Equation(int32_t RPM) {
+    UARTprintf("Conversion: %d\n", (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686)));
     return (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686));
 }
 
@@ -547,9 +546,9 @@ uint32_t RPM_to_Duty_Equation(uint32_t RPM) {
  * PID Controller
  */
 
-uint32_t PID(uint32_t desired_speed, uint32_t current_speed, int32_t *integral_error_ptr) {
+int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_error_ptr) {
     float Kp = 2;
-    //float Ki = 0.1;
+    float Ki = 0.5;
     UARTprintf("Desired RPM: %d\n", desired_speed);
     UARTprintf("Current RPM: %d\n", current_speed);
     
@@ -565,9 +564,9 @@ uint32_t PID(uint32_t desired_speed, uint32_t current_speed, int32_t *integral_e
         acceleration = -470;
     }
     UARTprintf("Minned Acceleration/Error: %d\n", acceleration);
-    UARTprintf("Output: %d\n\n", (uint32_t)round(current_speed + (acceleration) * Kp)); //(*integral_error_ptr * Ki)
+    UARTprintf("Output: %d\n\n", (int32_t)round(current_speed + (acceleration * Kp))); //  + (*integral_error_ptr * Ki)
 
-    return (uint32_t)round(current_speed + (acceleration * Kp)); //(*integral_error_ptr * Ki)
+    return (int32_t)round(current_speed + (acceleration * Kp) ); // + (*integral_error_ptr * Ki)
 }
 
 /*-----------------------------------------------------------*/
