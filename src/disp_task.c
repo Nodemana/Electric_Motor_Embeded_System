@@ -81,10 +81,13 @@
  * -------------------------------------------------------------------------------------------------
  */
 #define NUM_SENSORS     4
-#define Y_AXIS_ORIGIN   40
-#define Y_AXIS_LENGTH   142
-#define X_AXIS_ORIGIN   10
-#define X_AXIS_LENGTH   223
+#define Y_AXIS_ORIGIN   178
+#define Y_AXIS_LENGTH   132
+#define X_AXIS_ORIGIN   40
+#define X_AXIS_LENGTH   190
+
+#define NUMBER_Y_TICKS  5
+#define NUMBER_DATA_POINTS 20
 
 #define DRAW_LUX        (0)
 #define DRAW_TEMP       (1)
@@ -128,6 +131,23 @@ uint8_t sensors[NUM_SENSORS] = {DRAW_SPEED, DRAW_POWER, DRAW_TEMP, DRAW_LUX};
 
 uint32_t SpeedThreshold = 100000;
 
+/*
+ * data struct
+ */
+// Axis data
+typedef struct
+{
+    uint32_t min;           // Minimun value to plot
+    uint32_t max;           // Minimun value to plot
+} DataRange;
+
+DataRange Lux_Data_Range;
+
+uint8_t current_array_size = 0;
+
+/* Initialise Data Arrays for plotting */
+uint32_t lux_data[NUMBER_DATA_POINTS] = {0};
+
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
  * -------------------------------------------------------------------------------------------------
@@ -146,6 +166,10 @@ void vDISPTask(void);
  */
 static void prvDisplayTask(void *pvParameters);
 
+/*
+ * Function to update the data array
+ */
+void update_data_array(uint32_t * data_arr, uint32_t new_data);
 /*-----------------------------------------------------------*/
 
 /* ------------------------------------------------------------------------------------------------
@@ -171,6 +195,9 @@ void vDISPTask(void)
                 tskIDLE_PRIORITY + 1,
                 NULL);
 }
+
+// Plotting Functions
+void xyPlaneDraw(DataRange data_range, bool grid_on);
 
 //*****************************************************************************
 //
@@ -321,7 +348,7 @@ tRadioButtonWidget g_psRadioButtons[] =
                           &g_sKentec320x240x16_SSD2119, 240, 110, 80, 45,
                           RB_STYLE_TEXT, 16, 0, ClrSilver, ClrSilver, &g_sFontCm20,
                           "Temp", 0, OnRadioChange),
-        RadioButtonStruct(g_psRadioContainers, g_psRadioButtonIndicators, 0,
+        RadioButtonStruct(g_psRadioContainers, 0, 0,
                           &g_sKentec320x240x16_SSD2119, 240, 145, 80, 45,
                           RB_STYLE_TEXT, 16, 0, ClrSilver, ClrSilver, &g_sFontCm20,
                           "Light", 0, OnRadioChange)};
@@ -337,7 +364,8 @@ tContainerWidget g_psRadioContainers[] =
         ContainerStruct(g_psPanels + 1, 0, 0,
                         &g_sKentec320x240x16_SSD2119, 239, 27, 75, 160,
                         CTR_STYLE_OUTLINE | CTR_STYLE_TEXT, 0, ClrGray, ClrSilver,
-                        &g_sFontCm20, "Data")};
+                        &g_sFontCm20, "Data")
+    };
 
 //*****************************************************************************
 //
@@ -651,6 +679,11 @@ void OnRadioChange(tWidget *psWidget, uint32_t bSelected)
         }
     }
     selected_sensor = sensors[ui32Idx];
+
+    if (selected_sensor == LUX)
+    {
+        xyPlaneDraw(Lux_Data_Range, false);
+    }
 }
 
 //*****************************************************************************
@@ -658,43 +691,37 @@ void OnRadioChange(tWidget *psWidget, uint32_t bSelected)
 // Plot the axis
 //
 //*****************************************************************************
-/*
-void xyPlaneDraw(axis x_axis, axis y_axis, int num_y_labels, bool grid_on)
+void xyPlaneDraw(DataRange data_range, bool grid_on)
 {
-    GrContextForegroundSet(&sContext, ClrDarkBlue); // Set colour to dark blue
+    // 
+    GrContextForegroundSet(&sContext, ClrRed); // Set colour to dark blue
     char cstr[10];
+
     // Draw y axix
-    GrLineDrawV(&sContext, x_axis.origin, y_axis.origin, (y_axis.origin - y_axis.length));
-    // Numbers on graph
-    
-    for (int i = 0; i < (y_axis.length / y_axis.interval); i++)
+    GrLineDrawV(&sContext, X_AXIS_ORIGIN, Y_AXIS_ORIGIN, (Y_AXIS_ORIGIN - Y_AXIS_LENGTH));
+     // Draw x axis
+    GrLineDrawH(&sContext, X_AXIS_ORIGIN, (X_AXIS_ORIGIN + X_AXIS_LENGTH), Y_AXIS_ORIGIN);
+
+    // Draw y tick marks
+    for (int i = 0; i < NUMBER_Y_TICKS; i++)
     {
         // Plot each interval of y on y-axis
         GrContextFontSet(&sContext, &g_sFontCm16);
-        int y_range = y_axis.max - y_axis.min;
-        usprintf(cstr, "%d", i * y_range / (num_y_labels-1) );
+        int y_range = data_range.max - data_range.min;
+        int interval = round(y_range / (NUMBER_Y_TICKS-1));
+        usprintf(cstr, "%d", i * interval);
         GrStringDrawCentered(&sContext, cstr, -1,
-                             x_axis.origin - 20, y_axis.origin - (i * y_axis.interval), 0);
-        GrLineDrawH(&sContext, x_axis.origin-4, x_axis.origin + 4,  y_axis.origin - (i * y_axis.interval));
-    }
-
-    // Draw x axis
-    GrLineDrawH(&sContext, x_axis.origin, (x_axis.origin + x_axis.length), y_axis.origin);
-    
-    if (grid_on)
-    {
-        // Plot lines for grid
+                             X_AXIS_ORIGIN - 20, Y_AXIS_ORIGIN - (i * Y_AXIS_LENGTH / (NUMBER_Y_TICKS-1)), 0);
     }
 }
-*/
 void clearAxis (int backround_colour )
 {
     tRectangle sRect;
-    sRect.i16XMin = X_AXIS_ORIGIN;
-    sRect.i16YMin = Y_AXIS_ORIGIN;
+    sRect.i16XMin = X_AXIS_ORIGIN + 10;
+    sRect.i16YMin = Y_AXIS_ORIGIN - 10;
     sRect.i16XMax = X_AXIS_ORIGIN + X_AXIS_LENGTH;
-    sRect.i16YMax = Y_AXIS_ORIGIN + Y_AXIS_LENGTH;
-    GrContextForegroundSet(&sContext, backround_colour);
+    sRect.i16YMax = Y_AXIS_ORIGIN - Y_AXIS_LENGTH;
+    GrContextForegroundSet(&sContext, ClrRed);
     GrRectFill(&sContext, &sRect);
 }
 
@@ -702,6 +729,12 @@ void define_sensor_axis( void )
 {
     
 }
+
+void update_data_array(uint32_t * data_arr, uint32_t new_data)
+{
+
+}
+
 //*****************************************************************************
 //
 // A simple demonstration of the features of the TivaWare Graphics Library.
@@ -809,8 +842,13 @@ static void prvDisplayTask(void *pvParameters)
     const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
     EventBits_t DisplayBits;
     SensorMsg xReceivedMessage;
+    SensorMsg xLuxReceivedMessage;
     selected_sensor = NONE;
     char cstr[10];
+
+    // Data range structs
+    Lux_Data_Range.max = 200;
+    Lux_Data_Range.min = 0;
     while (1)
     {
         //
@@ -824,32 +862,48 @@ static void prvDisplayTask(void *pvParameters)
                                      pdFALSE,       /* Don't wait for both bits, either bit will do. */
                                      xTicksToWait); /* Wait a maximum of 100ms for either bit to be set. */
 
+        /* Update the data arrays of each sensor for plotting */
+        if ( ( ( DisplayBits & (LUX_DATA_READY) ) == (LUX_DATA_READY) ) )
+        {
+            if (xQueueReceive(xLuxSensorQueue,
+                        &(xLuxReceivedMessage),
+                        (TickType_t)10) == pdPASS)
+            {
+                // Update data array with new data to plot
+                update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
+            }
+        }
+        else
+        {
+            // Update data array with old data to plot
+            // update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
+        }
         // Handle the current state
         switch (selected_sensor) 
         {
             case LUX:
-                if ( ( ( DisplayBits & (LUX_DATA_READY) ) == (LUX_DATA_READY) ) )
-                {
-                    if (xQueueReceive(xLuxSensorQueue,
-                              &(xReceivedMessage),
-                              (TickType_t)10) == pdPASS)
-                    {
-                        //UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
-                    }
-                    /* Call update_axis function to scale axis for lux sensor - to be added */
+                // if ( ( ( DisplayBits & (LUX_DATA_READY) ) == (LUX_DATA_READY) ) )
+                // {
+                //     // if (xQueueReceive(xLuxSensorQueue,
+                //     //           &(xReceivedMessage),
+                //     //           (TickType_t)10) == pdPASS)
+                //     // {
+                //     //     //UARTprintf("Receiving data: %d\n", xReceivedMessage.SensorReading);
+                //     // }
+                //     // /* Call update_axis function to scale axis for lux sensor - to be added */
 
-                    /* Plot the lux data by calling a plot_data function - to be added */
-                    usprintf(cstr, "Lux: %d", xReceivedMessage.SensorReading);
-                    clearAxis(ClrWhite);
+                //     // /* Plot the lux data by calling a plot_data function - to be added */
+                //     // usprintf(cstr, "Lux: %d", xReceivedMessage.SensorReading);
+                //     // clearAxis(ClrWhite);
 
-                    //
-                    // Put the application name in the middle of the banner.
-                    //
-                    GrContextForegroundSet(&sContext, ClrDarkBlue);
-                    GrContextFontSet(&sContext, &g_sFontCm20);
-                    GrStringDrawCentered(&sContext, cstr, -1,
-                                        Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
-                }
+                //     // //
+                //     // // Put the application name in the middle of the banner.
+                //     // //
+                //     // GrContextForegroundSet(&sContext, ClrDarkBlue);
+                //     // GrContextFontSet(&sContext, &g_sFontCm20);
+                //     // GrStringDrawCentered(&sContext, cstr, -1,
+                //     //                     Y_AXIS_ORIGIN - Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                // }
                 break;
 
             case TEMP:
@@ -864,7 +918,7 @@ static void prvDisplayTask(void *pvParameters)
                 GrContextForegroundSet(&sContext, ClrDarkBlue);
                 GrContextFontSet(&sContext, &g_sFontCm20);
                 GrStringDrawCentered(&sContext, "Temp: ", -1,
-                                    Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                                    Y_AXIS_ORIGIN - Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
                 break;
 
             case POWER:
@@ -876,7 +930,7 @@ static void prvDisplayTask(void *pvParameters)
                 GrContextForegroundSet(&sContext, ClrDarkBlue);
                 GrContextFontSet(&sContext, &g_sFontCm20);
                 GrStringDrawCentered(&sContext, "Power: ", -1,
-                                    Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                                    Y_AXIS_ORIGIN - Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
                 break;
                 
             case SPEED:
@@ -900,7 +954,7 @@ static void prvDisplayTask(void *pvParameters)
                     GrContextForegroundSet(&sContext, ClrDarkBlue);
                     GrContextFontSet(&sContext, &g_sFontCm20);
                     GrStringDrawCentered(&sContext, cstr, -1,
-                                        Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                                        Y_AXIS_ORIGIN - Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
                 }
                 break;
             
@@ -912,5 +966,11 @@ static void prvDisplayTask(void *pvParameters)
                 return -1;
                 break;
         }
+        if (current_array_size < NUMBER_DATA_POINTS)
+        {
+            UARTprintf("Current Array Size = %d\n", current_array_size);
+            current_array_size++;
+        }
+        // UARTprintf("Current Array Size = %d\n", current_array_size);
     }
 }
