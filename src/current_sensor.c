@@ -214,8 +214,8 @@ static void prvCurrentSensorTask( void *pvParameters) {
         // UartPrintFloat(power_msg, sizeof(power_msg), power);
 
         float avgPower = rollingAverage(power);
-        char power_msg[18] = "\n Total power: %f\n";
-        UartPrintFloat(power_msg, sizeof(power_msg), avgPower);
+        // char power_msg[18] = "\n Total power: %f\n";
+        // UartPrintFloat(power_msg, sizeof(power_msg), avgPower);
 
         msg.ClaclulatedData = avgPower;
         msg.TimeStamp = xTaskGetTickCount();
