@@ -275,7 +275,7 @@ static void prvMotorTask(void *pvParameters)
     uint16_t period_value = 100;
     uint16_t desired_duty = 100;
 
-    int32_t desired_speed_RPM = 1500;
+    int32_t desired_speed_RPM = 11000;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
@@ -304,8 +304,6 @@ static void prvMotorTask(void *pvParameters)
     enableMotor();
     for (;;)
     {
-       
-
         switch (motor_control_state)
         {
         case IDLE:
@@ -320,7 +318,6 @@ static void prvMotorTask(void *pvParameters)
             //};
             break;
         case RUNNING:
-            
 
             if (xSemaphoreTake(xSharedDutyWithMotor, 0) == pdPASS) {
                 // Recieve
@@ -413,13 +410,13 @@ static void prvSpeedSenseTask(void *pvParameters)
             }
 
             // ESTOP CODE
-            // if(xSemaphoreTake(xSharedSpeedESTOPThreshold, 0) == pdPASS)
-            // {
-            //     if(filtered_revoltutions_per_minute > SpeedThreshold){
-            //         xSemaphoreGive(xESTOPSemaphore);
-            //         xSemaphoreGive(xSharedSpeedESTOPThreshold);
-            //     }
-            // }
+            if(xSemaphoreTake(xSharedSpeedESTOPThreshold, 0) == pdPASS)
+            {
+                if(filtered_revoltutions_per_minute > SpeedThreshold){
+                    xSemaphoreGive(xESTOPSemaphore);
+                    xSemaphoreGive(xSharedSpeedESTOPThreshold);
+                }
+            }
 
 
             // ACCELERATION
@@ -447,9 +444,9 @@ static void prvSpeedSenseTask(void *pvParameters)
             // }
 
             // DEBUG PRINTS
-            UARTprintf("Hall States: %d\n", hall_state_counter);
-            UARTprintf("RPS: %d\n", revolutions_per_second);
-            UARTprintf("RPM: %d\n", revolutions_per_minute);
+            // UARTprintf("Hall States: %d\n", hall_state_counter);
+            // UARTprintf("RPS: %d\n", revolutions_per_second);
+            // UARTprintf("RPM: %d\n", revolutions_per_minute);
             UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
             UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 

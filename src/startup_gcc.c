@@ -105,8 +105,6 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // PWM Generator 2
         IntDefaultHandler,     // Quadrature Encoder 0
         IntDefaultHandler,     // ADC Sequence 0
-        // ADC0_SEQ1_ISR,         // ADC Sequence 1
-        // ADC0_SEQ2_ISR,         // ADC Sequence 2
         IntDefaultHandler,       // ADC Sequence 1
         IntDefaultHandler,       // ADC Sequence 2
         TouchScreenIntHandler, // ADC Sequence 3
@@ -141,8 +139,6 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         IntDefaultHandler,     // ADC1 Sequence 0 MARK
         ADC1_SEQ1_ISR,         // ADC1 Sequence 1
         ADC1_SEQ2_ISR,         // ADC1 Sequence 2
-        IntDefaultHandler,     // ADC1 Sequence 1
-        IntDefaultHandler,     // ADC1 Sequence 2
         IntDefaultHandler,     // ADC1 Sequence 3
         IntDefaultHandler,     // External Bus Interface 0
         IntDefaultHandler,     // GPIO Port J
