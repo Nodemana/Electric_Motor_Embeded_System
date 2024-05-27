@@ -24,7 +24,6 @@
 #include "task.h"
 #include "semphr.h"
 
-
 /* Hardware includes. */
 #include "driverlib/pin_map.h"
 #include "inc/hw_memmap.h"
@@ -81,6 +80,7 @@ SemaphoreHandle_t xTimerSemaphore = NULL;
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
+SemaphoreHandle_
  * -------------------------------------------------------------------------------------------------
  */
 
@@ -115,6 +115,7 @@ extern void vLUXTask(void);
 
 /* API to trigger the que task */
 extern void vQueueTask(void);
+extern void vCreateCurrentSensorTask( void );
 
 static void prvConfigureHallInts(void);
 
