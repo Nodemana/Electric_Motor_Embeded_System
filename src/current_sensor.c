@@ -83,7 +83,7 @@
 #define ADC_STEP 0
 #define TWELVE_BIT_MAX 4096
 // Define moving average window size
-#define WINDOW_SIZE 6   // Window size of moving average
+#define WINDOW_SIZE 20   // Window size of moving average
 
 
 /*-----------------------------------------------------------*/
