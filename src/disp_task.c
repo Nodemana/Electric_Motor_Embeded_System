@@ -74,6 +74,7 @@
 
 // Inlcude que.h
 #include "que.h"
+#include "float_utils.h"
 
 /* ------------------------------------------------------------------------------------------------
  *                                           Definitions
@@ -882,20 +883,10 @@ static void prvDisplayTask(void *pvParameters)
                 GrContextFontSet(&sContext, &g_sFontCm20);
 
                 float val = xRecievedPower.ClaclulatedData;
-
-                char txt[] = "Power:    ";
- 
-                uint32_t msd = (uint32_t)val;
-                uint32_t d1 = (uint32_t)(val * 10) - (msd * 10);
-                uint32_t d2 = (uint32_t)(val * 100) - (msd * 100) - (d1 * 10);
-                
-                txt[6] = msd;
-                txt[7] = d1;
-                txt[8] = d2;
-
-                GrStringDrawCentered(&sContext, txt, -1,
+                char cstr[15];
+                ftoa("Power: %f", cstr, 9, val);
+                GrStringDrawCentered(&sContext, cstr, -1,
                                     Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
-                break;
                 
             case SPEED:
                 if ( ( ( DisplayBits & (SPEED_DATA_READY) ) == (SPEED_DATA_READY) ) )

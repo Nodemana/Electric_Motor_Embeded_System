@@ -52,7 +52,9 @@
 #include "driverlib/pin_map.h"
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include "driverlib/adc.h"
 
@@ -74,13 +76,14 @@
 #include "driverlib/pwm.h"
 
 #include "que.h"
+#include "float_utils.h"
 
-#define ADC_SEQ_0 0
 #define ADC_SEQ_1 1
 #define ADC_SEQ_2 2
-#define ADC_SEQ_3 3
 #define ADC_STEP 0
 #define TWELVE_BIT_MAX 4096
+// Define moving average window size
+#define WINDOW_SIZE 6   // Window size of moving average
 
 
 /*-----------------------------------------------------------*/
@@ -103,17 +106,23 @@ void vCreateCurrentSensorTask(void);
 */
 void ConfigADCInputs( void );
 
-void UartPrintFloat(char*, uint32_t, float);
 float MapVoltage(uint32_t);
 float CalculateCurrent(float);
+float CalculatePower(float);
+
+/*
+ * Helper function for calculating the moving average
+ */
+float rollingAverage(float newValue);
+// Declare array to store sampled data for moving average
+float sampleWindow[WINDOW_SIZE];
+uint8_t idx = 0;
 
 /*
  * Hardware interrupt handlers
  */
-
 void ADC1_SEQ1_ISR(void);
 void ADC1_SEQ2_ISR(void);
-// void ADC1_SEQ3_ISR(void);
 
 /*-----------------------------------------------------------*/
 
@@ -142,7 +151,7 @@ void vCreateCurrentSensorTask( void )
 
 /*-----------------------------------------------------------*/
 
-// TDOD:
+// TODO:
 //  - Get latest hall effect sensor data
 //  - Estimate current using hall effect sensor data, current phase voltage and the state diagram from https://canvas.qut.edu.au/courses/17133/pages/egh456-assessment-2-design-of-embedded-system-for-electric-vehicle-group-project-details?module_item_id=1511474
 //  - Create buffer with window size of at least 5
@@ -150,24 +159,16 @@ void vCreateCurrentSensorTask( void )
 //  - Run at 150Hz or higher (task is always running but the ADC interrupts are only done at 150Hz? Maybe dont even use a task? just fire an event when new measurements are read?)
 //  - Provide functions and data to be accessible for the UI
 static void prvCurrentSensorTask( void *pvParameters) {
+    // Step 1: Initialise values.
     uint32_t ui32Value;
     uint32_t num_samples;
-    // int32_t g_Hall_A;
-    // int32_t g_Hall_B;
-    // int32_t g_Hall_C;
     uint16_t phase_A_raw_est;
     uint16_t phase_B_raw;
     uint16_t phase_C_raw;
     CalcMsg msg;
 
     for (;;) {
-
-        // Step 1: Read hall effect sensors.
-        // g_Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
-        // g_Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
-        // g_Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
-
-        // Step 2: Read ADCs
+        // Step 2: Read ADCs.
         ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_1);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
@@ -188,34 +189,38 @@ static void prvCurrentSensorTask( void *pvParameters) {
         // using 3/2 * maximum - (B + C). This assures A + B + C = 0 if you were to scale it back between -1 and 1.
         phase_A_raw_est = (TWELVE_BIT_MAX * 3/2 )-(phase_B_raw + phase_C_raw);
 
+        // Step 4: Convert voltage to current in Amps
         uint16_t raw_Vs[] = {phase_A_raw_est, phase_B_raw, phase_C_raw};
         char phase_letters[] = {'A', 'B', 'C'};
         float currents[3];
-        // Step 4: Convert voltage to current in Amps
         for(uint32_t i = 0; i < 3; i++)
         {
             float voltage = MapVoltage(raw_Vs[i]);
             currents[i] = CalculateCurrent(voltage);
-            char voltage_msg[14] = "\t Voltage: %f";
-            char current_msg[14] = "\t Current: %f";
-            UARTprintf("\nPhase %c: ", phase_letters[i]);
-            UARTprintf("\t raw: %d", raw_Vs[i]);
-            UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-            // UartPrintFloat(current_msg, sizeof(current_msg), currents[i]);
-            int32_t curr = (int32_t)(currents[i] * 100);
-            UARTprintf("\t Current: %d", curr);
+
+            // char voltage_msg[14] = "\t Voltage: %f";
+            // char current_msg[14] = "\t Current: %f";
+            // UARTprintf("\nPhase %c: ", phase_letters[i]);
+            // UARTprintf("\t raw: %d", raw_Vs[i]);
+            // UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
+            // UARTprintf("\t Current: %d", (int32_t)(currents[i] * 100));
         }
 
         float total_cur =  fabsf(currents[0]) + fabsf(currents[1]) + fabsf(currents[2]);
-        char current_msg[12] = "\n Current: %f";
-        UartPrintFloat(current_msg, sizeof(current_msg), total_cur);
-        float power = total_cur * 20; //* 1.732;
-        char power_msg[18] = "\n Total power: %f\n";
-        UartPrintFloat(power_msg, sizeof(power_msg), power);
-        msg.ClaclulatedData = power;
-        msg.TimeStamp = xTaskGetTickCount();
-        // Step 5: Add estimate to averaging list.
+        // char current_msg[14] = "\n Current: %f";
+        // UartPrintFloat(current_msg, sizeof(current_msg), total_cur);
+        float power = CalculatePower(total_cur);
+        // char power_msg[18] = "\n Total power: %f\n";
+        // UartPrintFloat(power_msg, sizeof(power_msg), power);
 
+        float avgPower = rollingAverage(power);
+        char power_msg[18] = "\n Total power: %f\n";
+        UartPrintFloat(power_msg, sizeof(power_msg), avgPower);
+
+        msg.ClaclulatedData = avgPower;
+        msg.TimeStamp = xTaskGetTickCount();
+
+        // Step 5: Add estimate to averaging list.
         xQueueSend(/* The handle of the queue. */
             xPowerSensorQueue,
             /* The address of the LuxMessage variable.
@@ -226,50 +231,12 @@ static void prvCurrentSensorTask( void *pvParameters) {
             * full.  Check the value returned by xQueueSend() to know
             * if the message was sent to the queue successfully. */
             (TickType_t)0);
-        vTaskDelay(pdMS_TO_TICKS( 250 ));
+        vTaskDelay(pdMS_TO_TICKS( 6 ));
         xEventGroupSetBits(xSensorEventGroup, POWER_DATA_READY);
     }
-
 }        
 
 /*-----------------------------------------------------------*/
-
-/// @brief Prints the given string and float value to the uart console.
-/// @param message is the string to be printed, this function expects 
-/// it to contain "%f" but will still work without it. It can only have 
-/// one "%f".
-/// @param length is the length of the string.
-/// @param value is the float value to be interpolated into the given string.
-void UartPrintFloat(char* message, uint32_t length, float value)
-{
-    // In the string, find the %f and replace with %d.%d%d.
-    uint32_t size = length + 5;
-    char new_string[size];
-    char prev_char = ' ';
-    uint32_t offset = 0;
-    for(int i = 0; i < length; i++)
-    {
-        if(message[i] == 'f' && prev_char == '%'){
-            // %f
-            new_string[i] = 'd';
-            new_string[i + 1] = '.';
-            new_string[i + 2] = '%';
-            new_string[i + 3] = 'd';
-            new_string[i + 4] = '%';
-            new_string[i + 5] = 'd';
-            offset = 5;
-        }
-        else{
-            new_string[i + offset] = message[i];
-            prev_char = message[i];
-        }
-    }
-
-    uint32_t msd = (uint32_t)value;
-    uint32_t d1 = (uint32_t)(value * 10) - (msd * 10);
-    uint32_t d2 = (uint32_t)(value * 100) - (msd * 100) - (d1 * 10);
-    UARTprintf(new_string, msd, d1, d2);
-}
 
 /// @brief Converts the raw ADC voltage measurement int SI Voltage.
 /// @param raw_voltage The 
@@ -292,16 +259,31 @@ float CalculateCurrent(float voltage)
     float G_SCA = 10.;
     float R_SENSE = 0.007;
 
-    return ((VREF / 2) - (voltage))/(G_SCA * R_SENSE);
+    return ((VREF / 2.) - (voltage))/(G_SCA * R_SENSE);
 }
 
 float CalculatePower(float current)
 {
-    return current * 20.;
+    return current * 20.; // * 1.732;
 }
 
 /*-----------------------------------------------------------*/
+static float sum = 0;
+// Function to calculate moving average
+float rollingAverage(float newValue)
+{
+    // Update sum with new value
+    sum += newValue - sampleWindow[idx];
 
+    // Update sampled data array
+    sampleWindow[idx] = newValue;
+
+    // Increment index, wrap around if necessary
+    idx = (idx + 1) % WINDOW_SIZE;
+
+    // Return average
+    return sum / WINDOW_SIZE;
+}
 
 /*-----------------------------------------------------------*/
 
