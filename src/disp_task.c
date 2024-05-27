@@ -890,6 +890,7 @@ static void prvDisplayTask(void *pvParameters)
                 ftoa("Power: %f", cstr, 9, val);
                 GrStringDrawCentered(&sContext, cstr, -1,
                                     Y_AXIS_ORIGIN + Y_AXIS_LENGTH/2, X_AXIS_ORIGIN + X_AXIS_LENGTH/2, 0);
+                break;
                 
             case SPEED:
                 if ( ( ( DisplayBits & (SPEED_DATA_READY) ) == (SPEED_DATA_READY) ) )
