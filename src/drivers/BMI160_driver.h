@@ -40,7 +40,7 @@
 // Global variable for storage of actual system clock frequency.
 //
 //*****************************************************************************
-uint32_t g_ui32SysClock;
+extern uint32_t g_ui32SysClock;
 
 /**** BMI160 Structs ****/
 struct bmi160_accel_t AccelerationXYZ;  // Define the struct for reading the acceleration values
@@ -58,20 +58,6 @@ __error__(char *pcFilename, uint32_t ui32Line)
 }
 #endif
 
-
-//*****************************************************************************
-//
-// Configure the UART and its pins.  This must be called before UARTprintf().
-//
-//*****************************************************************************
-void ConfigureUART(void);
-
-//*****************************************************************************
-//
-// Configure the I2C and its pins. 
-//
-//*****************************************************************************
-void prvConfigureI2C_INT( void );
 
 //*****************************************************************************
 //
