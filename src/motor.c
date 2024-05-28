@@ -387,8 +387,8 @@ static void prvSpeedSenseTask(void *pvParameters)
     int32_t acceleration_RPM_per_second_filter[FILTER_SIZE];
     int32_t acceleration_filter_current_size = 0;
 
-    //uint32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
-    //uint32_t window_current_size = 0;
+    // int32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
+    // int32_t window_current_size = 0;
 
     // TickType_t time_difference;
     TickType_t TickCount_Prev = 0;
@@ -443,7 +443,10 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             // ACCELERATION
             acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
-
+        //   acceleration_RPM_per_second = AccelerationCalculation(revolutions_per_minute, revolutions_per_minute_one_second_window, window_current_size, TIMER_TICKS_PER_SEC); // this is per 8th of a second.
+        //     if (window_current_size != (TIMER_TICKS_PER_SEC - 1)){
+        //         window_current_size += 1;
+        //     }
             int32_t filtered_acceleration_RPM_per_second = FilterData(acceleration_RPM_per_second, acceleration_RPM_per_second_filter, acceleration_filter_current_size, FILTER_SIZE);
             if (acceleration_filter_current_size != (FILTER_SIZE - 1))
             {
