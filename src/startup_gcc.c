@@ -50,6 +50,7 @@ extern void ADC1_SEQ1_ISR(void);
 extern void ADC1_SEQ2_ISR(void);
 extern void xTimer2AIntHandler_SpeedTimerISR(void);
 extern void xTimer2BIntHandler_PIDTimerISR(void);
+extern void xTimer3AIntHandler(void);
 
 //*****************************************************************************
 //
@@ -125,7 +126,7 @@ __attribute__((section(".isr_vector"))) void (*const g_pfnVectors[])(void) =
         HallSensorHandler,     // GPIO Port H
         IntDefaultHandler,     // UART2 Rx and Tx
         IntDefaultHandler,     // SSI1 Rx and Tx
-        IntDefaultHandler,     // Timer 3 subtimer A
+        xTimer3AIntHandler,    // Timer 3 subtimer A
         IntDefaultHandler,     // Timer 3 subtimer B
         IntDefaultHandler,     // I2C1 Master and Slave
         IntDefaultHandler,     // CAN0

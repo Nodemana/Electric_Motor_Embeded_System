@@ -259,6 +259,24 @@ static void prvConfigureTimers(void)
      /* Enable Timer 2B. */
     TimerEnable(TIMER2_BASE, TIMER_B);
 
+    /* The Timer 3 peripheral must be enabled for use. */
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER3);
+
+    /* Configure Timer 3 in full-width periodic mode. */
+    TimerConfigure(TIMER3_BASE, TIMER_CFG_PERIODIC);
+
+    /* Set the Timer 3A load value to run at 150 Hz. */
+    TimerLoadSet(TIMER3_BASE, TIMER_A, g_ui32SysClock / 150);
+
+    /* Configure the Timer 3A interrupt for timeout. */
+    TimerIntEnable(TIMER3_BASE, TIMER_TIMA_TIMEOUT);
+
+    /* Enable the Timer 3A interrupt in the NVIC. */
+    IntEnable(INT_TIMER3A);
+
+    /* Enable Timer 3A. */
+    // TimerEnable(TIMER3_BASE, TIMER_A);
+
     // /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
 }

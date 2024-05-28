@@ -123,6 +123,7 @@ uint8_t idx = 0;
  */
 void ADC1_SEQ1_ISR(void);
 void ADC1_SEQ2_ISR(void);
+void xTimer3AIntHandler(void);
 
 /*-----------------------------------------------------------*/
 
@@ -169,14 +170,10 @@ static void prvCurrentSensorTask( void *pvParameters) {
 
     for (;;) {
         // Step 2: Read ADCs.
-        ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_1);
-
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC1_BASE, ADC_SEQ_1, &ui32Value); // Read the value from the ADC.
             phase_B_raw = ui32Value;
         }
-
-        ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_2);
 
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC1_BASE, ADC_SEQ_2, &ui32Value); // Read the value from the ADC.
@@ -232,7 +229,7 @@ static void prvCurrentSensorTask( void *pvParameters) {
             * full.  Check the value returned by xQueueSend() to know
             * if the message was sent to the queue successfully. */
             (TickType_t)0);
-        vTaskDelay(pdMS_TO_TICKS( 6 ));
+        // vTaskDelay(pdMS_TO_TICKS( 10 ));
         xEventGroupSetBits(xSensorEventGroup, POWER_DATA_READY);
     }
 }        
@@ -322,6 +319,7 @@ void ConfigADCInputs(void)
     ADCIntRegister(ADC1_BASE, ADC_SEQ_2, ADC1_SEQ2_ISR); // Registers the ISR with the specific ADC and Sequence.
     ADCIntEnableEx(ADC1_BASE, ADC_INT_SS2); // Enables Interrupts for specific Sequence
     UARTprintf("\nDone setting up ADC hardware.");
+    TimerEnable(TIMER3_BASE, TIMER_A);
 }
 
 /*-----------------------------------------------------------*/
@@ -344,4 +342,14 @@ void ADC1_SEQ2_ISR(void)
     xSemaphoreGiveFromISR( xADCSemaphore, &xVoltageSensorTaskWoken);
     ADCIntClear(ADC1_BASE, ADC_SEQ_2);
     portYIELD_FROM_ISR( &xVoltageSensorTaskWoken );  
+}
+
+void xTimer3AIntHandler(void)
+{
+    ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_1);
+    ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_2);
+
+    // Clear the timer interrupt.
+    //  /* Clear the hardware interrupt flag for Timer 0A. */
+    TimerIntClear(TIMER3_BASE, TIMER_TIMA_TIMEOUT);
 }
