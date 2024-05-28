@@ -77,6 +77,7 @@ SemaphoreHandle_t xSharedDutyWithMotor = NULL;
 
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
+SemaphoreHandle_t xPlotTimerSemaphore = NULL;
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
@@ -136,6 +137,7 @@ int main(void)
     xTimerSemaphore = xSemaphoreCreateBinary();
     xESTOPSemaphore = xSemaphoreCreateBinary();
     xControllerSemaphore = xSemaphoreCreateBinary();
+    xPlotTimerSemaphore = xSemaphoreCreateBinary();
 
     xSharedSpeedWithController = xSemaphoreCreateMutex();
     xSharedSpeedESTOPThreshold = xSemaphoreCreateMutex();
@@ -149,7 +151,8 @@ int main(void)
         (xSharedSpeedESTOPThreshold != NULL) && 
         (xESTOPSemaphore != NULL) &&
         (xControllerSemaphore != NULL) &&
-        (xSharedDutyWithMotor != NULL)
+        (xSharedDutyWithMotor != NULL) &&
+        (xPlotTimerSemaphore != NULL)
         )
     {
         vDISPTask();
