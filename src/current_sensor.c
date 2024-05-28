@@ -206,18 +206,19 @@ static void prvCurrentSensorTask( void *pvParameters) {
             // UARTprintf("\t Current: %d", (int32_t)(currents[i] * 100));
         }
 
-        float total_cur =  fabsf(currents[0]) + fabsf(currents[1]) + fabsf(currents[2]);
+        float total_cur =  fabsf(currents[1]) + fabsf(currents[2]) * 3/2;//+ fabsf(currents[0]);
+        float avgCurrent = rollingAverage(total_cur);
         // char current_msg[14] = "\n Current: %f";
         // UartPrintFloat(current_msg, sizeof(current_msg), total_cur);
-        float power = CalculatePower(total_cur);
+        float power = CalculatePower(avgCurrent);
         // char power_msg[18] = "\n Total power: %f\n";
         // UartPrintFloat(power_msg, sizeof(power_msg), power);
 
-        float avgPower = rollingAverage(power);
+
         // char power_msg[18] = "\n Total power: %f\n";
         // UartPrintFloat(power_msg, sizeof(power_msg), avgPower);
 
-        msg.ClaclulatedData = avgPower;
+        msg.ClaclulatedData = power;
         msg.TimeStamp = xTaskGetTickCount();
 
         // Step 5: Add estimate to averaging list.
