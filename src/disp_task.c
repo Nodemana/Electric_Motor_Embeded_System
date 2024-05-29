@@ -889,8 +889,8 @@ void update_data_array(float * data_arr, float new_data)
 
 void plot_data(float * data_arr, DataRange data_range)
 {
-    float y_step_size = ( (data_range.max - data_range.min) / Y_AXIS_LENGTH );
-    float x_time_step = X_AXIS_LENGTH / NUMBER_DATA_POINTS;
+    float y_step_size = (float)( (data_range.max - data_range.min) / Y_AXIS_LENGTH );
+    float x_time_step = (float)(X_AXIS_LENGTH / NUMBER_DATA_POINTS);
     float y_data = 0; 
     float x_data = 0;
     float prev_x_data = 0;
@@ -904,14 +904,14 @@ void plot_data(float * data_arr, DataRange data_range)
         // UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
         for (int i = 0; i < current_array_size; i++)
         {
-            x_data = (X_AXIS_ORIGIN + (x_time_step * i) + 10);
+            x_data = (float)(X_AXIS_ORIGIN + (x_time_step * i) + 10);
             if (data_arr[i] >= data_range.max) 
             {
-                y_data = (Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
+                y_data = (float)(Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
             else
             {
-                y_data = (Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5);
+                y_data = (float)(Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5);
             }
             GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
@@ -929,14 +929,14 @@ void plot_data(float * data_arr, DataRange data_range)
         GrContextForegroundSet(&sContext, ClrDarkBlue);
         for (int i = 0; i < NUMBER_DATA_POINTS; i++)
         {
-            x_data = (X_AXIS_ORIGIN + (x_time_step * i) + 10);
+            x_data = (float)(X_AXIS_ORIGIN + (x_time_step * i) + 10);
             if (data_arr[i] > data_range.max) 
             {
-                y_data = (Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
+                y_data = (float)(Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
             else
             {
-                y_data = (Y_AXIS_ORIGIN -  (data_arr[i] / y_step_size) - 1.5);
+                y_data = (float)(Y_AXIS_ORIGIN -  (data_arr[i] / y_step_size) - 1.5);
             }
             GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
@@ -1053,7 +1053,7 @@ void update_data_arrays(void)
     EventBits_t DisplayBits;
     SensorMsg xReceivedMessage;
     SensorMsg xLuxReceivedMessage;
-    SensorMsg xAccelReceivedMessage;
+    CalcMsg   xAccelReceivedMessage;
     SensorMsg xPowerReceivedMessage;
     SensorMsg xSpeedReceivedMessage;
     static char pcCanvasText[5];
@@ -1119,8 +1119,8 @@ void update_data_arrays(void)
         {
             // Update data array with new data to plot
             update_data_array(accel_data, xAccelReceivedMessage.ClaclulatedData);
-            // char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
-            // UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), xAccelReceivedMessage.ClaclulatedData);
+            char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
+            UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), xAccelReceivedMessage.ClaclulatedData);
         }
     }
     else if (current_array_size > 0)
@@ -1212,7 +1212,7 @@ static void prvPlotTask(void *pvParameters)
     Lux_Data_Range.max = 200;
     Lux_Data_Range.min = 0;
 
-    Accel_Data_Range.max = 2;
+    Accel_Data_Range.max = 3;
     Accel_Data_Range.min = 0;
 
     Power_Data_Range.max = 100;
