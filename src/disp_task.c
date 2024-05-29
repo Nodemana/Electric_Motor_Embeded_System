@@ -1049,7 +1049,7 @@ void update_data_arrays(void)
                     (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
-            // update_data_array(speed_data, xSpeedReceivedMessage.SensorReading);
+            update_data_array(speed_data, xSpeedReceivedMessage.SensorReading);
         }
     }
     else if (current_array_size > 0)
