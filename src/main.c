@@ -305,6 +305,14 @@ static void prvConfigureTimers(void)
 
 /*-----------------------------------------------------------*/
 
+static void prvConfigureLED( void )
+{
+    /* Initialize LED 2 */
+    LEDWrite(LED_D2, LED_D2);
+}
+
+/*-----------------------------------------------------------*/
+
 static void prvConfigureButton( void )
 {
     /* Initialize the LaunchPad Buttons. */
@@ -340,6 +348,7 @@ static void prvSetupHardware(void)
     prvConfigureUART();
 
     //Config_Timers();
+    prvConfigureLED();
 
     /* Configure the button. */
     prvConfigureButton();
