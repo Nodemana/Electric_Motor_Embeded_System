@@ -181,7 +181,7 @@ void ShuffleData(int32_t *data, uint32_t size);
 
 int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size);
 /*
- * Called by main() to create the Hello print task.
+ * Called by main() to initialise all motor associated tasks.
  */
 void vCreateMotorTask(void);
 
@@ -193,17 +193,6 @@ void vCreateMotorTask(void);
 
 void vCreateMotorTask(void)
 {
-
-    /* Create the task as described in the comments at the top of this file.
-     *
-     * The xTaskCreate parameters in order are:
-     *  - The function that implements the task.
-     *  - The text name Hello task - for debug only as it is
-     *    not used by the kernel.
-     *  - The size of the stack to allocate to the task.
-     *  - No parameter passed to the task
-     *  - The priority assigned to the task.
-     *  - The task handle is NULL */
     xTaskCreate(prvMotorTask,
                 "Motor",
                 configMINIMAL_STACK_SIZE,
@@ -485,8 +474,8 @@ static void prvSpeedSenseTask(void *pvParameters)
             // UARTprintf("Hall States: %d\n", hall_state_counter);
             // UARTprintf("RPS: %d\n", revolutions_per_second);
             // UARTprintf("RPM: %d\n", revolutions_per_minute);
-            // UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 
