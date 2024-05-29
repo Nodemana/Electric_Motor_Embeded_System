@@ -751,7 +751,8 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         // Yes - update the canvas to show the slider value.
         //
         Set_Speed = i32Value;
-        usprintf(pcSliderText, "%3d%%", i32Value);
+        //usprintf(pcSliderText, "%3d%%", i32Value);
+        usprintf(pcSliderText, "%d RPM", i32Value*SET_SPEED_SCALER);
         SliderTextSet(&g_psSliders[3], pcSliderText);
         WidgetPaint((tWidget *)&g_psSliders[3]);
     }
