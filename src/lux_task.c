@@ -195,7 +195,6 @@ void vLuxSoftwareTimer( void )
         }
     }
     UARTprintf("Timer created\n");
-
 }
 
 /* Timer Call Back function */
@@ -309,16 +308,16 @@ void prvConfigureOPT3001(void)
 
 
 
-/*-----------------------------------------------------------*/
+// /*-----------------------------------------------------------*/
 
-void vApplicationTickHook(void)
-{
-    /* This function will be called by each tick interrupt if
-        configUSE_TICK_HOOK is set to 1 in FreeRTOSConfig.h.  User code can be
-        added here, but the tick hook is called from an interrupt context, so
-        code must not attempt to block, and only the interrupt safe FreeRTOS API
-        functions can be used (those that end in FromISR()). */
+// void vApplicationTickHook(void)
+// {
+//     /* This function will be called by each tick interrupt if
+//         configUSE_TICK_HOOK is set to 1 in FreeRTOSConfig.h.  User code can be
+//         added here, but the tick hook is called from an interrupt context, so
+//         code must not attempt to block, and only the interrupt safe FreeRTOS API
+//         functions can be used (those that end in FromISR()). */
 
-    /* Only the full demo uses the tick hook so there is no code is
-        executed here. */
-}
+//     /* Only the full demo uses the tick hook so there is no code is
+//         executed here. */
+// }

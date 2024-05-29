@@ -78,6 +78,7 @@ SemaphoreHandle_t xSharedDutyWithMotor = NULL;
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
 SemaphoreHandle_t xPlotTimerSemaphore = NULL;
+SemaphoreHandle_t xAccelTimerSemaphore = NULL;
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
@@ -114,6 +115,9 @@ extern void vDISPTask(void);
 /* API to trigger the LUX task. */
 extern void vLUXTask(void);
 
+/* API to trigger the LUX task. */
+extern void vACCELTask(void);
+
 /* API to trigger the que task */
 extern void vQueueTask(void);
 extern void vCreateCurrentSensorTask( void );
@@ -135,6 +139,7 @@ int main(void)
     xADCSemaphore = xSemaphoreCreateBinary();
     xSpeedSemaphore = xSemaphoreCreateBinary();
     xTimerSemaphore = xSemaphoreCreateBinary();
+    xAccelTimerSemaphore = xSemaphoreCreateBinary();
     xESTOPSemaphore = xSemaphoreCreateBinary();
     xControllerSemaphore = xSemaphoreCreateBinary();
     xPlotTimerSemaphore = xSemaphoreCreateBinary();
@@ -157,6 +162,7 @@ int main(void)
     {
         vDISPTask();
         vLUXTask();
+        vACCELTask();
         vQueueTask();
         vCreateMotorTask();
         vCreateCurrentSensorTask();
