@@ -184,16 +184,16 @@ static void prvReadAccelSensor(void *pvParameters)
             float accel_z_g = convert_raw_to_g(fabs(AccelerationXYZ.z));
             float accel_avg = (accel_x_g + accel_y_g + accel_z_g) / 3;
 
-            UARTprintf("\n");
+            //UARTprintf("\n");
             char accel_x_msg[23] = "Acceleartion X = : %f\n";
             char accel_y_msg[23] = "Acceleartion Y = : %f\n";
             char accel_z_msg[23] = "Acceleartion Z = : %f\n";
             char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
-            UartPrintFloat(accel_x_msg, sizeof(accel_x_msg), accel_x_g);
-            UartPrintFloat(accel_y_msg, sizeof(accel_y_msg), accel_y_g);
-            UartPrintFloat(accel_z_msg, sizeof(accel_z_msg), accel_z_g);
-            UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), accel_avg);
-            UARTprintf("\n");
+            // UartPrintFloat(accel_x_msg, sizeof(accel_x_msg), accel_x_g);
+            // UartPrintFloat(accel_y_msg, sizeof(accel_y_msg), accel_y_g);
+            // UartPrintFloat(accel_z_msg, sizeof(accel_z_msg), accel_z_g);
+            // UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), accel_avg);
+            //UARTprintf("\n");
         }
     }
 }

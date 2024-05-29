@@ -118,6 +118,9 @@ extern SemaphoreHandle_t xSharedSpeedWithController;
 extern SemaphoreHandle_t xSharedDutyWithMotor;
 extern SemaphoreHandle_t xSharedSpeedESTOPThreshold;
 extern SemaphoreHandle_t xSharedDutyWithController;
+extern SemaphoreHandle_t xSharedSetSpeedFromGUI;
+extern SemaphoreHandle_t xSharedAccelerationThresholdFromGUI;
+
 
 
 // Binary Semaphores
@@ -126,6 +129,8 @@ extern SemaphoreHandle_t xControllerSemaphore;
 
 
 extern uint32_t SpeedThreshold;
+extern uint32_t Shared_Set_Speed;
+extern double Shared_Acceleration_Threshold;
 
 /* ------------------------------------------------------------------------------------------------
  *                                     Local Global Variables
@@ -233,7 +238,6 @@ static void prvESTOPTask(void *pvParameters)
 {
     for(;;) {
         if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
-            
             motor_control_state = E_STOPPING;
 
         }
@@ -262,7 +266,8 @@ static void prvMotorControllerTask(void *pvParameters)
                 } else if(motor_control_state == RUNNING) {
                     // Recieve
                     desired_speed_RPM = desired_speed_RPM_shared;
-
+                    UARTprintf("Desired Speed: %d\n", desired_speed_RPM);
+                    UARTprintf("Speed: %d\n", current_speed_RPM);
                     // Send
                     next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
                     //UARTprintf("Next Duty: %d\n", next_duty_shared);
@@ -287,7 +292,7 @@ static void prvMotorTask(void *pvParameters)
     uint16_t period_value = 100;
     //uint16_t desired_duty = 100;
 
-    int32_t desired_speed_RPM = 11000;
+    int32_t desired_speed_RPM = 1500;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
@@ -316,6 +321,12 @@ static void prvMotorTask(void *pvParameters)
     enableMotor();
     for (;;)
     {
+        if(xSemaphoreTake(xSharedSetSpeedFromGUI, 0) == pdPASS) {
+            desired_speed_RPM = Shared_Set_Speed;
+            //UARTprintf("desired_speed_RPM: %d\n", desired_speed_RPM);
+
+            xSemaphoreGive(xSharedSetSpeedFromGUI);
+        }
         switch (motor_control_state)
         {
         case IDLE:
@@ -422,7 +433,7 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             revolutions_per_second_double = num_revs / TimeSinceLastTaskRun;
 
-            int32_t revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
+            int32_t revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/10 of a second. 12 Hall states in one revolution.
 
             int32_t revolutions_per_minute = revolutions_per_second * 60;
             //UARTprintf("RPM before filtered: %d\n", revolutions_per_minute);
@@ -590,7 +601,7 @@ int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_erro
     }
     // UARTprintf("Acceleration/Error: %d\n", acceleration);
     // UARTprintf("Integral Error: %d\n", *integral_error_ptr);
-    int32_t total_error =acceleration;
+    int32_t total_error = acceleration;
     if (total_error > 500) {
         total_error = 500;
     }

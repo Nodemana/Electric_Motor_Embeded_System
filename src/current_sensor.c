@@ -78,6 +78,11 @@
 #include "que.h"
 #include "float_utils.h"
 
+/* ------------------------------------------------------------------------------------------------
+ *                                           Definitions
+ * -------------------------------------------------------------------------------------------------
+ */
+
 #define ADC_SEQ_1 1
 #define ADC_SEQ_2 2
 #define ADC_STEP 0
@@ -88,8 +93,34 @@
 
 /*-----------------------------------------------------------*/
 
+/* ------------------------------------------------------------------------------------------------
+ *                                      Extern Global Variables
+ * -------------------------------------------------------------------------------------------------
+ */
+
 // Semaphores
 extern SemaphoreHandle_t xADCSemaphore;
+extern SemaphoreHandle_t xESTOPSemaphore;
+
+// Mutexes
+extern SemaphoreHandle_t xSharedPowerThresholdFromGUI;
+
+extern double Shared_Power_Threshold;
+
+/* ------------------------------------------------------------------------------------------------
+ *                                     Local Global Variables
+ * -------------------------------------------------------------------------------------------------
+ */
+double Power_Threshold;
+
+// Declare array to store sampled data for moving average
+float sampleWindow[WINDOW_SIZE];
+uint8_t idx = 0;
+
+/* ------------------------------------------------------------------------------------------------
+ *                                      Function Declarations
+ * -------------------------------------------------------------------------------------------------
+ */
 
 /*
  * The tasks as described in the comments at the top of this file.
@@ -114,9 +145,7 @@ float CalculatePower(float);
  * Helper function for calculating the moving average
  */
 float rollingAverage(float newValue);
-// Declare array to store sampled data for moving average
-float sampleWindow[WINDOW_SIZE];
-uint8_t idx = 0;
+
 
 /*
  * Hardware interrupt handlers
@@ -211,11 +240,22 @@ static void prvCurrentSensorTask( void *pvParameters) {
         // char power_msg[18] = "\n Total power: %f\n";
         // UartPrintFloat(power_msg, sizeof(power_msg), power);
 
+        if(xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS) {
+            Power_Threshold = Shared_Power_Threshold;
+            //UARTprintf("desired_speed_RPM: %d\n", desired_speed_RPM);
+
+            xSemaphoreGive(xSharedPowerThresholdFromGUI);
+        }
+
+        if(power > Power_Threshold){
+            xSemaphoreGive(xESTOPSemaphore);
+        }
+
 
         // char power_msg[18] = "\n Total power: %f\n";
         // UartPrintFloat(power_msg, sizeof(power_msg), avgPower);
 
-        msg.ClaclulatedData = power;
+        msg.CalculatedData = power;
         msg.TimeStamp = xTaskGetTickCount();
 
         // Step 5: Add estimate to averaging list.
