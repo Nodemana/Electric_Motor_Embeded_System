@@ -80,20 +80,19 @@
  *                                           Definitions
  * -------------------------------------------------------------------------------------------------
  */
-#define NUM_SENSORS     4
-#define Y_AXIS_ORIGIN   178
-#define Y_AXIS_LENGTH   132
-#define X_AXIS_ORIGIN   45
-#define X_AXIS_LENGTH   190
+#define NUM_SENSORS 4
+#define Y_AXIS_ORIGIN 178
+#define Y_AXIS_LENGTH 132
+#define X_AXIS_ORIGIN 45
+#define X_AXIS_LENGTH 190
 
-#define NUMBER_Y_TICKS  5
+#define NUMBER_Y_TICKS 5
 #define NUMBER_DATA_POINTS 30
 
-#define DRAW_LUX        (0)
-#define DRAW_TEMP       (1)
-#define DRAW_POWER      (2)
-#define DRAW_SPEED      (3)
-
+#define DRAW_LUX (0)
+#define DRAW_TEMP (1)
+#define DRAW_POWER (2)
+#define DRAW_SPEED (3)
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Extern Global Variables
@@ -110,7 +109,7 @@ extern SemaphoreHandle_t xPlotTimerSemaphore;
  */
 
 /*
- * Queue used to send and receive complete struct AMessage structures. 
+ * Queue used to send and receive complete struct AMessage structures.
  * One has been created for each sensor
  */
 
@@ -121,7 +120,8 @@ extern SemaphoreHandle_t xPlotTimerSemaphore;
 /* Context */
 tContext sContext;
 
-typedef enum {
+typedef enum
+{
     LUX,
     TEMP,
     POWER,
@@ -133,6 +133,8 @@ Sensors selected_sensor;
 uint8_t sensors[NUM_SENSORS] = {DRAW_SPEED, DRAW_POWER, DRAW_TEMP, DRAW_LUX};
 
 uint32_t SpeedThreshold = 10000;
+
+bool night_flag = true;
 
 /*
  * data struct
@@ -169,9 +171,9 @@ bool state_changed = false;
  *                                      Function Declarations
  * -------------------------------------------------------------------------------------------------
  */
-void init_display( void );
+void init_display(void);
 
-void define_sensor_axis( void );
+void define_sensor_axis(void);
 
 void update_data_arrays(void);
 // void update_data_arrays(void);
@@ -187,7 +189,7 @@ void vDISPTask(void);
 
 /* Timer Functions */
 void vPlotTimerCallback(TimerHandle_t xTimer); // Handles the timer interupt
-void vPlotSoftwareTimer( void ); // Software timer
+void vPlotSoftwareTimer(void);                 // Software timer
 
 /*
  * The tasks is to handle the display (using grlib).
@@ -287,7 +289,12 @@ extern tCanvasWidget g_psPanels[];
 // The first panel, which demonstrates the canvas widget.
 //
 //*****************************************************************************
-Canvas(g_sCanvas6, g_psPanels, 0, 0,
+Canvas(g_sCanvas7, g_psPanels, 0, 0,
+       &g_sKentec320x240x16_SSD2119, 10, 157, 220, 25,
+       CANVAS_STYLE_FILL | CANVAS_STYLE_OUTLINE | CANVAS_STYLE_TEXT,
+       ClrDarkBlue, ClrSilver, ClrWhite, &g_sFontCm22, "Night", 0, 0);
+
+Canvas(g_sCanvas6, g_psPanels, &g_sCanvas7, 0,
        &g_sKentec320x240x16_SSD2119, 235, 49, 75, 30,
        CANVAS_STYLE_TEXT,
        ClrMidnightBlue, ClrGray, ClrSilver, &g_sFontCm22, "[RPM]", 0, 0);
@@ -331,12 +338,12 @@ tSliderWidget g_psSliders[] =
                       SL_STYLE_TEXT | SL_STYLE_BACKG_TEXT),
                      ClrRed, ClrGray, ClrSilver, ClrWhite, ClrWhite,
                      &g_sFontCm20, "Acceleration", 0, 0, OnSliderChange),
-        SliderStruct(g_psPanels, g_psSliders + 3, 0,
-                     &g_sKentec320x240x16_SSD2119, 10, 157, 220, 25, 0, 100, 25,
-                     (SL_STYLE_FILL | SL_STYLE_BACKG_FILL | SL_STYLE_OUTLINE |
-                      SL_STYLE_TEXT | SL_STYLE_BACKG_TEXT),
-                     ClrLightBlue, ClrDarkBlue, ClrSilver, ClrWhite, ClrWhite,
-                     &g_sFontCm20, "Light: Night/Day", 0, 0, OnSliderChange),
+        // SliderStruct(g_psPanels, g_psSliders + 3, 0,
+        //              &g_sKentec320x240x16_SSD2119, 10, 157, 220, 25, 0, 100, 0,
+        //              (SL_STYLE_FILL | SL_STYLE_BACKG_FILL | SL_STYLE_OUTLINE |
+        //               SL_STYLE_TEXT | SL_STYLE_BACKG_TEXT),
+        //              ClrLightBlue, ClrDarkBlue, ClrSilver, ClrWhite, ClrWhite,
+        //              &g_sFontCm20, "Night", 0, 0, OnSliderChange),
         SliderStruct(g_psPanels, &g_sCanvas1, 0,
                      &g_sKentec320x240x16_SSD2119, 10, 52, 220, 25, 0, 100, 50,
                      (SL_STYLE_FILL | SL_STYLE_BACKG_FILL | SL_STYLE_OUTLINE |
@@ -347,9 +354,12 @@ tSliderWidget g_psSliders[] =
 };
 
 // Sent these high so they aren't used... for now
-#define SLIDER_TEXT_VAL_INDEX 6
 #define SLIDER_LOCKED_INDEX 6
 #define SLIDER_CANVAS_VAL_INDEX 6
+#define POWER_INDEX 0
+#define ACCEL_INDEX 1
+#define LIGHT_INDEX 2
+#define SPEED_INDEX 3
 
 #define NUM_SLIDERS (sizeof(g_psSliders) / sizeof(g_psSliders[0]))
 
@@ -399,7 +409,7 @@ tRadioButtonWidget g_psRadioButtons[] =
                             sizeof(g_psRadioButtons[0]))
 tContainerWidget g_psRadioContainers[] =
     {
-        
+
         ContainerStruct(g_psPanels + 1, g_psRadioContainers + 1, g_psRadioButtons,
                         &g_sKentec320x240x16_SSD2119, 5, 35, 233, 152,
                         CTR_STYLE_OUTLINE | CTR_STYLE_FILL, ClrWhite, ClrGray, ClrSilver,
@@ -407,8 +417,7 @@ tContainerWidget g_psRadioContainers[] =
         ContainerStruct(g_psPanels + 1, 0, 0,
                         &g_sKentec320x240x16_SSD2119, 239, 27, 75, 160,
                         CTR_STYLE_OUTLINE | CTR_STYLE_TEXT, 0, ClrGray, ClrSilver,
-                        &g_sFontCm20, "Data")
-    };
+                        &g_sFontCm20, "Data")};
 
 //*****************************************************************************
 //
@@ -474,7 +483,7 @@ uint32_t g_ui32Panel;
 //
 //*****************************************************************************
 void OnPrevious(tWidget *psWidget)
-{   
+{
     selected_sensor = NONE;
     //
     // There is nothing to be done if the first panel is already being
@@ -750,14 +759,14 @@ void OnRadioChange(tWidget *psWidget, uint32_t bSelected)
 //*****************************************************************************
 void xyPlaneDraw(DataRange data_range, bool grid_on)
 {
-    // 
+    //
     GrContextForegroundSet(&sContext, ClrDarkBlue); // Set colour to dark blue
     // char cstr[10];
     char output[10];
     // Draw y axix
     GrLineDrawV(&sContext, X_AXIS_ORIGIN, Y_AXIS_ORIGIN, (Y_AXIS_ORIGIN - Y_AXIS_LENGTH));
-     // Draw x axis
-    GrLineDrawH(&sContext, X_AXIS_ORIGIN, (X_AXIS_ORIGIN + X_AXIS_LENGTH-4), Y_AXIS_ORIGIN);
+    // Draw x axis
+    GrLineDrawH(&sContext, X_AXIS_ORIGIN, (X_AXIS_ORIGIN + X_AXIS_LENGTH - 4), Y_AXIS_ORIGIN);
 
     // Draw y tick marks
     for (int i = 0; i < NUMBER_Y_TICKS; i++)
@@ -781,7 +790,7 @@ void xyPlaneDraw(DataRange data_range, bool grid_on)
         GrLineDrawH(&sContext, X_AXIS_ORIGIN -4, X_AXIS_ORIGIN + 4,  (Y_AXIS_ORIGIN-0) - (i * (Y_AXIS_LENGTH-0) / (NUMBER_Y_TICKS-1)));
     }
 }
-void clearAxis (int backround_colour )
+void clearAxis(int backround_colour)
 {
     tRectangle sRect;
     sRect.i16XMin = X_AXIS_ORIGIN + 6;
@@ -792,7 +801,7 @@ void clearAxis (int backround_colour )
     GrRectFill(&sContext, &sRect);
 }
 
-void clearScreen (int backround_colour )
+void clearScreen(int backround_colour)
 {
     tRectangle sRect;
     sRect.i16XMin = X_AXIS_ORIGIN - 38;
@@ -803,9 +812,8 @@ void clearScreen (int backround_colour )
     GrRectFill(&sContext, &sRect);
 }
 
-void define_sensor_axis( void )
+void define_sensor_axis(void)
 {
-    
 }
 
 void update_data_array(float * data_arr, float new_data)
@@ -822,11 +830,12 @@ void update_data_array(float * data_arr, float new_data)
         }
         data_arr[NUMBER_DATA_POINTS - 1] = new_data; // Append new value at the end
     }
-    //UARTprintf("Updated array:\n");
-    for (int i = 0; i < NUMBER_DATA_POINTS; i++) {
-        //UARTprintf("%d ", data_arr[i]);
+    // UARTprintf("Updated array:\n");
+    for (int i = 0; i < NUMBER_DATA_POINTS; i++)
+    {
+        // UARTprintf("%d ", data_arr[i]);
     }
-    //UARTprintf("\n");
+    // UARTprintf("\n");
 }
 
 void plot_data(float * data_arr, DataRange data_range)
@@ -843,7 +852,7 @@ void plot_data(float * data_arr, DataRange data_range)
     {
         clearAxis(ClrWhite);
         GrContextForegroundSet(&sContext, ClrDarkBlue);
-        //UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
+        // UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
         for (int i = 0; i < current_array_size; i++)
         {
             x_data = (X_AXIS_ORIGIN + (x_time_step * i) + 10);
@@ -892,7 +901,7 @@ void plot_data(float * data_arr, DataRange data_range)
     }
 }
 
-void init_display( void )
+void init_display(void)
 {
     tRectangle sRect;
 
@@ -992,24 +1001,58 @@ void init_display( void )
 void update_data_arrays(void)
 {
     const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
-    
+    EventBits_t DisplayBits;
+    SensorMsg xReceivedMessage;
+    SensorMsg xLuxReceivedMessage;
+    SensorMsg xAccelReceivedMessage;
+    SensorMsg xPowerReceivedMessage;
+    SensorMsg xSpeedReceivedMessage;
+    static char pcCanvasText[5];
+
     /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
-    DisplayBits = xEventGroupWaitBits(xSensorEventGroup,   /* The event group being tested. */
-                                LUX_DATA_READY | ACCEL_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY, /* The bits within the event group to wait for. */
-                                pdTRUE,        /* BIT_0 & BIT_4 should be cleared before returning. */
-                                pdFALSE,       /* Don't wait for both bits, either bit will do. */
-                                xTicksToWait); /* Wait a maximum of 100ms for either bit to be set. */
+    DisplayBits = xEventGroupWaitBits(xSensorEventGroup,                                                       /* The event group being tested. */
+                                      LUX_DATA_READY | ACCEL_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY, /* The bits within the event group to wait for. */
+                                      pdTRUE,                                                                  /* BIT_0 & BIT_4 should be cleared before returning. */
+                                      pdFALSE,                                                                 /* Don't wait for both bits, either bit will do. */
+                                      xTicksToWait);                                                           /* Wait a maximum of 100ms for either bit to be set. */
 
     /**** Update the data arrays of each sensor for plotting ****/
     /*** LUX ***/
-    if ( ( ( DisplayBits & (LUX_DATA_READY) ) == (LUX_DATA_READY) ) )
+    if (((DisplayBits & (LUX_DATA_READY)) == (LUX_DATA_READY)))
     {
         if (xQueueReceive(xLuxSensorQueue,
-                    &(xLuxReceivedMessage),
-                    (TickType_t)10) == pdPASS)
+                          &(xLuxReceivedMessage),
+                          (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
             update_data_array(lux_data, (float)xLuxReceivedMessage.SensorReading);
+
+            // threshold check
+            if (xLuxReceivedMessage.SensorReading >= 5)
+            {
+                LEDWrite(LED_D2, 0);
+                // check what page we are, don't want to update page 2
+                if (g_ui32Panel == 0 && night_flag)
+                {
+                    night_flag = false;
+                    usprintf(pcCanvasText, "%s", "Day");
+                    CanvasTextSet(&g_sCanvas7, pcCanvasText);
+                    CanvasFillColorSet(&g_sCanvas7, ClrLightBlue);
+                    WidgetPaint((tWidget *)&g_sCanvas7);
+                }
+            }
+            else
+            {
+                LEDWrite(LED_D2, LED_D2);
+                if (g_ui32Panel == 0 && !night_flag)
+                {
+                    night_flag = true;
+                    usprintf(pcCanvasText, "%s", "Night");
+                    CanvasTextSet(&g_sCanvas7, pcCanvasText);
+                    CanvasFillColorSet(&g_sCanvas7, ClrDarkBlue);
+                    WidgetPaint((tWidget *)&g_sCanvas7);
+                }
+            }
         }
     }
     else if (current_array_size > 0)
@@ -1022,8 +1065,8 @@ void update_data_arrays(void)
     if ( ( ( DisplayBits & (ACCEL_DATA_READY) ) == (ACCEL_DATA_READY) ) )
     {
         if (xQueueReceive(xAccelSensorQueue,
-                    &(xAccelReceivedMessage),
-                    (TickType_t)10) == pdPASS)
+                          &(xAccelReceivedMessage),
+                          (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
             update_data_array(accel_data, xAccelReceivedMessage.ClaclulatedData);
@@ -1038,11 +1081,11 @@ void update_data_arrays(void)
     }
 
     /*** POWER ***/
-    if ( ( ( DisplayBits & (POWER_DATA_READY) ) == (POWER_DATA_READY) ) )
+    if (((DisplayBits & (POWER_DATA_READY)) == (POWER_DATA_READY)))
     {
         if (xQueueReceive(xPowerSensorQueue,
-                    &(xPowerReceivedMessage),
-                    (TickType_t)10) == pdPASS)
+                          &(xPowerReceivedMessage),
+                          (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
             // update_data_array(power_data, xPowerReceivedMessage.SensorReading);
@@ -1055,11 +1098,11 @@ void update_data_arrays(void)
     }
 
     /*** SPEED ***/
-    if ( ( ( DisplayBits & (SPEED_DATA_READY) ) == (SPEED_DATA_READY) ) )
+    if (((DisplayBits & (SPEED_DATA_READY)) == (SPEED_DATA_READY)))
     {
         if (xQueueReceive(xSpeedSensorQueue,
-                    &(xSpeedReceivedMessage),
-                    (TickType_t)10) == pdPASS)
+                          &(xSpeedReceivedMessage),
+                          (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
             update_data_array(speed_data, (float)xSpeedReceivedMessage.SensorReading);
@@ -1070,7 +1113,6 @@ void update_data_arrays(void)
         // Update data array with old data to plot
         update_data_array(speed_data, (float)xSpeedReceivedMessage.SensorReading);
     }
-
 }
 //*****************************************************************************
 //
@@ -1083,7 +1125,7 @@ static void prvDisplayTask(void *pvParameters)
     //
     // Loop forever handling widget messages.
     //
-    
+
     while (1)
     {
         //
@@ -1096,7 +1138,7 @@ static void prvDisplayTask(void *pvParameters)
 static void prvPlotTask(void *pvParameters)
 {
     //
-    
+
     selected_sensor = NONE;
     char cstr[10];
 
@@ -1120,17 +1162,17 @@ static void prvPlotTask(void *pvParameters)
             // Update data arrays
             update_data_arrays();
             // Handle the current state
-            switch (selected_sensor) 
+            switch (selected_sensor)
             {
-                case LUX:
-                    if (state_changed)
-                    {
-                        clearScreen(ClrWhite);
-                        xyPlaneDraw(Lux_Data_Range, false);
-                        state_changed = false;
-                    }
-                    plot_data(lux_data, Lux_Data_Range);
-                    break;
+            case LUX:
+                if (state_changed)
+                {
+                    clearScreen(ClrWhite);
+                    xyPlaneDraw(Lux_Data_Range, false);
+                    state_changed = false;
+                }
+                plot_data(lux_data, Lux_Data_Range);
+                break;
 
                 case TEMP:
                     if (state_changed)
@@ -1142,33 +1184,33 @@ static void prvPlotTask(void *pvParameters)
                     plot_data(accel_data, Accel_Data_Range);
                     break;
 
-                case POWER:
-                    if (state_changed)
-                    {
-                        clearScreen(ClrWhite);
-                        xyPlaneDraw(Power_Data_Range, false);
-                        state_changed = false;
-                    }
-                    plot_data(power_data, Power_Data_Range);
-                    break;
-                    
-                case SPEED:
-                    if (state_changed)
-                    {
-                        clearScreen(ClrWhite);
-                        xyPlaneDraw(Speed_Data_Range, false);
-                        state_changed = false;
-                    }
-                    plot_data(speed_data, Speed_Data_Range);
-                    break;
-                
-                case NONE:
-                    // Do nothing
-                    break;
-                default:
-                    UARTprintf("ERROR\n");
-                    return -1;
-                    break;
+            case POWER:
+                if (state_changed)
+                {
+                    clearScreen(ClrWhite);
+                    xyPlaneDraw(Power_Data_Range, false);
+                    state_changed = false;
+                }
+                plot_data(power_data, Power_Data_Range);
+                break;
+
+            case SPEED:
+                if (state_changed)
+                {
+                    clearScreen(ClrWhite);
+                    xyPlaneDraw(Speed_Data_Range, false);
+                    state_changed = false;
+                }
+                plot_data(speed_data, Speed_Data_Range);
+                break;
+
+            case NONE:
+                // Do nothing
+                break;
+            default:
+                UARTprintf("ERROR\n");
+                return -1;
+                break;
             }
             if (current_array_size < NUMBER_DATA_POINTS)
             {
@@ -1179,7 +1221,7 @@ static void prvPlotTask(void *pvParameters)
 }
 
 /*-----------------------------------------------------------*/
-void vPlotSoftwareTimer( void )
+void vPlotSoftwareTimer(void)
 {
     // Create a timer
     TimerHandle_t xPlotTimer = xTimerCreate(
@@ -1204,7 +1246,6 @@ void vPlotSoftwareTimer( void )
         }
     }
     UARTprintf("Timer created\n");
-
 }
 
 /* Timer Call Back function */
