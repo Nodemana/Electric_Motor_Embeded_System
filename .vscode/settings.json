@@ -5,11 +5,6 @@
         "event_groups.h": "c",
         "i2c.h": "c",
         "functional": "c",
-        "rtos_hw_drivers.h": "c",
-        "array": "c",
-        "string": "c",
-        "radiobutton.h": "c",
-        "float_utils.h": "c",
-        "que.h": "c"
+        "rtos_hw_drivers.h": "c"
     }
 }
