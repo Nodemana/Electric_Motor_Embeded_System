@@ -232,10 +232,12 @@ void vCreateMotorTask(void)
 static void prvESTOPTask(void *pvParameters)
 {
     for(;;) {
-    if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
-        motor_control_state = E_STOPPING;
+        if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
+            
+            motor_control_state = E_STOPPING;
+
+        }
     }
-}
 }
 
 static void prvMotorControllerTask(void *pvParameters)

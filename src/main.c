@@ -283,6 +283,15 @@ static void prvConfigureTimers(void)
     /* Enable the Timer 3A interrupt in the NVIC. */
     IntEnable(INT_TIMER3A);
 
+    // NOT INITIALLY ENABLED, ENABLED IN ESTOP TASK
+    /* Set the Timer 3B load value to run at 100 Hz. */
+    TimerLoadSet(TIMER3_BASE, TIMER_B, g_ui32SysClock / 100);
+
+    /* Configure the Timer 3A interrupt for timeout. */
+    TimerIntEnable(TIMER3_BASE, TIMER_TIMB_TIMEOUT);
+
+    
+
     /* Enable Timer 3A. */
     // TimerEnable(TIMER3_BASE, TIMER_A);
 
