@@ -89,7 +89,7 @@ void vACCELTask(void);
 
 /* Timer Functions */
 void vAccelTimerCallback(TimerHandle_t xTimer); // Handles the timer interupt
-void vAccelSoftwareTimer( void ); // Software timer
+void vAccelSoftwareTimer(void);                 // Software timer
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Functions
@@ -109,27 +109,27 @@ void vACCELTask(void)
     /* Create the task as described in the comments at the top of this file.
      *
      */
-    xTaskCreate(prvReadAccelSensor,         // The function that implements the task.
-                "ACCEL",                      // The text name for the Task 
-                configMINIMAL_STACK_SIZE,   // The size of the stack to allocate to the task.
-                NULL,                       // The parameter(s) passed to the task
-                tskIDLE_PRIORITY + 1,       // The priority assigned to the task.
-                NULL);                      // Task handler
+    xTaskCreate(prvReadAccelSensor,       // The function that implements the task.
+                "ACCEL",                  // The text name for the Task
+                configMINIMAL_STACK_SIZE, // The size of the stack to allocate to the task.
+                NULL,                     // The parameter(s) passed to the task
+                tskIDLE_PRIORITY + 1,     // The priority assigned to the task.
+                NULL);                    // Task handler
 
     /* Set up the software timer */
     vAccelSoftwareTimer();
 }
 
 /*-----------------------------------------------------------*/
-void vAccelSoftwareTimer( void )
+void vAccelSoftwareTimer(void)
 {
     // Create a timer
     TimerHandle_t xTimer = xTimerCreate(
-        "AccelTimer",                // Name of the timer
-        pdMS_TO_TICKS(1000),    // Timer period in ticks (1 second here)
-        pdTRUE,                 // Auto-reload
-        (void *)0,              // Timer ID
-        vAccelTimerCallback          // Callback function
+        "AccelTimer",        // Name of the timer
+        pdMS_TO_TICKS(1000), // Timer period in ticks (1 second here)
+        pdTRUE,              // Auto-reload
+        (void *)0,           // Timer ID
+        vAccelTimerCallback  // Callback function
     );
 
     // Check if the timer was created successfully
@@ -171,7 +171,7 @@ void vAccelTimerCallback(TimerHandle_t xTimer)
 static void prvReadAccelSensor(void *pvParameters)
 {
     // Loop Forever
-    while(1)
+    while (1)
     {
         // // Wait for semaphore to be given by the timer ISR
         if (xSemaphoreTake(xAccelTimerSemaphore, portMAX_DELAY) == pdPASS)
@@ -197,7 +197,6 @@ static void prvReadAccelSensor(void *pvParameters)
         }
     }
 }
-
 
 /*-----------------------------------------------------------*/
 

@@ -69,11 +69,18 @@ uint32_t g_ui32SysClock;
 // Semaphores
 SemaphoreHandle_t xADCSemaphore = NULL;
 SemaphoreHandle_t xSpeedSemaphore = NULL;
-SemaphoreHandle_t xSharedSpeedWithController = NULL;
-SemaphoreHandle_t xSharedSpeedESTOPThreshold = NULL;
 SemaphoreHandle_t xESTOPSemaphore = NULL;
 SemaphoreHandle_t xControllerSemaphore = NULL;
+
+
+// Mutexes
+SemaphoreHandle_t xSharedSpeedWithController = NULL;
+SemaphoreHandle_t xSharedSpeedESTOPThreshold = NULL;
 SemaphoreHandle_t xSharedDutyWithMotor = NULL;
+SemaphoreHandle_t xSharedSetSpeedFromGUI = NULL;
+SemaphoreHandle_t xSharedPowerThresholdFromGUI = NULL;
+SemaphoreHandle_t xSharedAccelerationThresholdFromGUI = NULL;
+
 
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
@@ -148,9 +155,14 @@ int main(void)
     xControllerSemaphore = xSemaphoreCreateBinary();
     xPlotTimerSemaphore = xSemaphoreCreateBinary();
 
+    // Mutex Initialisation
     xSharedSpeedWithController = xSemaphoreCreateMutex();
     xSharedSpeedESTOPThreshold = xSemaphoreCreateMutex();
     xSharedDutyWithMotor = xSemaphoreCreateMutex();
+    xSharedSetSpeedFromGUI = xSemaphoreCreateMutex();
+    xSharedPowerThresholdFromGUI = xSemaphoreCreateMutex();
+    xSharedAccelerationThresholdFromGUI = xSemaphoreCreateMutex();
+
 
 
      if ((xADCSemaphore != NULL) && 
@@ -161,7 +173,10 @@ int main(void)
         (xESTOPSemaphore != NULL) &&
         (xControllerSemaphore != NULL) &&
         (xSharedDutyWithMotor != NULL) &&
-        (xPlotTimerSemaphore != NULL)
+        (xPlotTimerSemaphore != NULL) &&
+        (xSharedSetSpeedFromGUI != NULL) &&
+        (xSharedPowerThresholdFromGUI != NULL) &&
+        (xSharedAccelerationThresholdFromGUI != NULL)
         )
     {
         vDISPTask();

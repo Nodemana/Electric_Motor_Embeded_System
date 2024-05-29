@@ -78,6 +78,11 @@
 #include "que.h"
 #include "float_utils.h"
 
+/* ------------------------------------------------------------------------------------------------
+ *                                           Definitions
+ * -------------------------------------------------------------------------------------------------
+ */
+
 #define ADC_SEQ_1 1
 #define ADC_SEQ_2 2
 #define ADC_STEP 0
@@ -85,11 +90,46 @@
 // Define moving average window size
 #define WINDOW_SIZE 20   // Window size of moving average
 
+enum states
+{
+    IDLE,
+    STARTING,
+    RUNNING,
+    E_STOPPING,
+};
+
 
 /*-----------------------------------------------------------*/
 
+/* ------------------------------------------------------------------------------------------------
+ *                                      Extern Global Variables
+ * -------------------------------------------------------------------------------------------------
+ */
+
 // Semaphores
 extern SemaphoreHandle_t xADCSemaphore;
+extern SemaphoreHandle_t xESTOPSemaphore;
+
+// Mutexes
+extern SemaphoreHandle_t xSharedPowerThresholdFromGUI;
+
+extern uint32_t Shared_Power_Threshold;
+extern motor_control_state;
+
+/* ------------------------------------------------------------------------------------------------
+ *                                     Local Global Variables
+ * -------------------------------------------------------------------------------------------------
+ */
+uint32_t Threshold = 50;
+
+// Declare array to store sampled data for moving average
+float sampleWindow[WINDOW_SIZE];
+uint8_t idx = 0;
+
+/* ------------------------------------------------------------------------------------------------
+ *                                      Function Declarations
+ * -------------------------------------------------------------------------------------------------
+ */
 
 /*
  * The tasks as described in the comments at the top of this file.
@@ -114,9 +154,7 @@ float CalculatePower(float);
  * Helper function for calculating the moving average
  */
 float rollingAverage(float newValue);
-// Declare array to store sampled data for moving average
-float sampleWindow[WINDOW_SIZE];
-uint8_t idx = 0;
+
 
 /*
  * Hardware interrupt handlers
@@ -211,11 +249,27 @@ static void prvCurrentSensorTask( void *pvParameters) {
         // char power_msg[18] = "\n Total power: %f\n";
         // UartPrintFloat(power_msg, sizeof(power_msg), power);
 
+        if(xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS) {
+            Threshold = Shared_Power_Threshold;
+                // char power_msg[18] = "\n Total power: %f\n";
+                // UartPrintFloat(power_msg, sizeof(power_msg), Threshold);
+
+            xSemaphoreGive(xSharedPowerThresholdFromGUI);
+        }
+        if(motor_control_state == RUNNING){
+            if(power > Threshold){
+                char power_msg[18] = "\n Total power: %f\n";
+                UartPrintFloat(power_msg, sizeof(power_msg), power);
+                xSemaphoreGive(xESTOPSemaphore);
+            }
+        }
+
+
 
         // char power_msg[18] = "\n Total power: %f\n";
         // UartPrintFloat(power_msg, sizeof(power_msg), avgPower);
 
-        msg.ClaclulatedData = power;
+        msg.CalculatedData = power;
         msg.TimeStamp = xTaskGetTickCount();
 
         // Step 5: Add estimate to averaging list.

@@ -87,7 +87,7 @@ typedef struct SensorMsg
 
 typedef struct CalcMsg
 {
-    float ClaclulatedData;
+    float CalculatedData;
     uint32_t TimeStamp;
 } CalcMsg;
 

@@ -119,12 +119,16 @@ extern SemaphoreHandle_t xSharedSpeedWithController;
 extern SemaphoreHandle_t xSharedDutyWithMotor;
 extern SemaphoreHandle_t xSharedSpeedESTOPThreshold;
 extern SemaphoreHandle_t xSharedDutyWithController;
+extern SemaphoreHandle_t xSharedSetSpeedFromGUI;
+extern SemaphoreHandle_t xSharedAccelerationThresholdFromGUI;
 
 // Binary Semaphores
 extern SemaphoreHandle_t xESTOPSemaphore;
 extern SemaphoreHandle_t xControllerSemaphore;
 
 extern uint32_t SpeedThreshold;
+extern uint32_t Shared_Set_Speed;
+extern double Shared_Acceleration_Threshold;
 
 /* ------------------------------------------------------------------------------------------------
  *                                     Local Global Variables
@@ -183,7 +187,7 @@ void ShuffleData(int32_t *data, uint32_t size);
 
 int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size);
 /*
- * Called by main() to create the Hello print task.
+ * Called by main() to initialise all motor associated tasks.
  */
 void vCreateMotorTask(void);
 
@@ -195,17 +199,6 @@ void vCreateMotorTask(void);
 
 void vCreateMotorTask(void)
 {
-
-    /* Create the task as described in the comments at the top of this file.
-     *
-     * The xTaskCreate parameters in order are:
-     *  - The function that implements the task.
-     *  - The text name Hello task - for debug only as it is
-     *    not used by the kernel.
-     *  - The size of the stack to allocate to the task.
-     *  - No parameter passed to the task
-     *  - The priority assigned to the task.
-     *  - The task handle is NULL */
     xTaskCreate(prvMotorTask,
                 "Motor",
                 configMINIMAL_STACK_SIZE,
@@ -242,7 +235,6 @@ static void prvESTOPTask(void *pvParameters)
     {
         if (xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS)
         {
-
             motor_control_state = E_STOPPING;
         }
     }
@@ -277,7 +269,8 @@ static void prvMotorControllerTask(void *pvParameters)
                 {
                     // Recieve
                     desired_speed_RPM = desired_speed_RPM_shared;
-
+                    // UARTprintf("Desired Speed: %d\n", desired_speed_RPM);
+                    // UARTprintf("Speed: %d\n", current_speed_RPM);
                     // Send
                     next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
                     // UARTprintf("Next Duty: %d\n", next_duty_shared);
@@ -299,7 +292,7 @@ static void prvMotorTask(void *pvParameters)
     uint16_t period_value = 100;
     // uint16_t desired_duty = 100;
 
-    int32_t desired_speed_RPM = 11000;
+    int32_t desired_speed_RPM = 1500;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
@@ -328,6 +321,13 @@ static void prvMotorTask(void *pvParameters)
     enableMotor();
     for (;;)
     {
+        if (xSemaphoreTake(xSharedSetSpeedFromGUI, 0) == pdPASS)
+        {
+            desired_speed_RPM = Shared_Set_Speed;
+            // UARTprintf("desired_speed_RPM: %d\n", desired_speed_RPM);
+
+            xSemaphoreGive(xSharedSetSpeedFromGUI);
+        }
         switch (motor_control_state)
         {
         case IDLE:
@@ -470,7 +470,7 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             revolutions_per_second_double = num_revs / TimeSinceLastTaskRun;
 
-            int32_t revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/8 of a second. 12 Hall states in one revolution.
+            int32_t revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/10 of a second. 12 Hall states in one revolution.
 
             int32_t revolutions_per_minute = revolutions_per_second * 60;
             // UARTprintf("RPM before filtered: %d\n", revolutions_per_minute);
@@ -523,8 +523,8 @@ static void prvSpeedSenseTask(void *pvParameters)
             // UARTprintf("Hall States: %d\n", hall_state_counter);
             // UARTprintf("RPS: %d\n", revolutions_per_second);
             // UARTprintf("RPM: %d\n", revolutions_per_minute);
-            // UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 
