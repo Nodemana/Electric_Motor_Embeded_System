@@ -688,7 +688,7 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         //
         // Yes - update the canvas to show the slider value.
         //
-        usprintf(pcSliderText, "%3d%%", i32Value);
+        usprintf(pcSliderText, "Power = %3d", i32Value);
         SliderTextSet(&g_psSliders[0], pcSliderText);
         WidgetPaint((tWidget *)&g_psSliders[0]);
     }
