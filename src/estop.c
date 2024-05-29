@@ -117,7 +117,7 @@ uint32_t RPM_to_Duty_Equation(int32_t RPM);
 /*
  * Called by main() to initialise all motor associated tasks.
  */
-void vCreateMotorTask(void);
+void vCreateEMotorTask(void);
 
 
 /*
@@ -126,14 +126,14 @@ void vCreateMotorTask(void);
 
 /*-----------------------------------------------------------*/
 
-void vCreateMotorTask(void)
+void vCreateEMotorTask(void)
 {
-    xTaskCreate(prvESTOPSpeedSenseTask,
-                "ESTOP Speed Sensor",
-                configMINIMAL_STACK_SIZE,
-                NULL,
-                tskIDLE_PRIORITY,
-                ESTOPSpeedSenseHandle);
+    // xTaskCreate(prvESTOPSpeedSenseTask,
+    //             "ESTOP Speed Sensor",
+    //             configMINIMAL_STACK_SIZE,
+    //             NULL,
+    //             tskIDLE_PRIORITY,
+    //             ESTOPSpeedSenseHandle);
 
     xTaskCreate(prvESTOPControllerTask,
                 "ESTOP Controller",

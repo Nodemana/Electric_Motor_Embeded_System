@@ -17,7 +17,7 @@
 #include "driverlib/i2c.h"
 #include "utils/uartstdio.h"
 #include "utils/ustdlib.h"
-#include "float_utils.h"
+#include "utils/float_utils.h"
 #include <math.h>
 
 // BMI160 header file
