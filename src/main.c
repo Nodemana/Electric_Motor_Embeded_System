@@ -115,6 +115,9 @@ extern void vDISPTask(void);
 /* API to trigger the LUX task. */
 extern void vLUXTask(void);
 
+/* API to trigger the LUX task. */
+extern void vACCELTask(void);
+
 /* API to trigger the que task */
 extern void vQueueTask(void);
 extern void vCreateCurrentSensorTask( void );
@@ -159,6 +162,7 @@ int main(void)
     {
         vDISPTask();
         vLUXTask();
+        vACCELTask();
         vQueueTask();
         vCreateMotorTask();
         vCreateCurrentSensorTask();

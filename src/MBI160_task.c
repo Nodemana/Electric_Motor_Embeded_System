@@ -176,7 +176,7 @@ static void prvReadAccelSensor(void *pvParameters)
         // // Wait for semaphore to be given by the timer ISR
         if (xSemaphoreTake(xAccelTimerSemaphore, portMAX_DELAY) == pdPASS)
         {
-            SysCtlDelay(g_ui32SysClock);
+            // SysCtlDelay(g_ui32SysClock);
             s8 result = bmi160_read_accel_xyz(&AccelerationXYZ);
             /* Convert the raw data into acceleration */
             float accel_x_g = convert_raw_to_g(fabs(AccelerationXYZ.x));
