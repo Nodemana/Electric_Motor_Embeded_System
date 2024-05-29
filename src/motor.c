@@ -85,8 +85,6 @@
 #define FILTER_SIZE 10
 #define TIMER_TICKS_PER_SEC 10
 #define speedQUEUE_LENGTH (10)
-#define START_SPEED 200
-#define SPEED_THRESHOLD 20
 
 struct Message
 {
@@ -229,39 +227,19 @@ static void prvESTOPTask(void *pvParameters)
 
 static void prvMotorTask(void *pvParameters)
 {
-    uint16_t duty_value = 10;
+    // uint16_t duty_value = 10;
     uint16_t period_value = 100;
     // uint16_t desired_duty = 100;
 
     int32_t current_speed_RPM;
-    int32_t desired_speed_RPM = 1500;
+    int32_t desired_speed_RPM;
     int32_t integral_error = 0;
+
+    bool stopping_flag = false;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
-    /* Set at >10% to get it to start */
-    setDuty(duty_value);
 
-    /* Kick start the motor */
-
-    // 1. Read hall effect sensors
-    //  Do an initial read of the hall effect sensor GPIO lines
-    Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
-
-    // UARTprintf("\nHall A: %d", Hall_A);
-
-    Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
-
-    // UARTprintf("\nHall B: %d", Hall_B);
-
-    Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
-
-    // UARTprintf("\nHall C: %d\n", Hall_C);
-
-    // give the read hall effect sensor lines to updateMotor() to move the motor
-    updateMotor(Hall_A, Hall_B, Hall_C);
-
-    enableMotor();
     for (;;)
     {
         if (xSemaphoreTake(xSharedSpeedWithController, portMAX_DELAY) == pdPASS)
@@ -283,73 +261,76 @@ static void prvMotorTask(void *pvParameters)
         {
         case IDLE:
             LEDWrite(LED_D1, 0);
-            // UARTprintf("IDLE");
-            // vTaskDelay(portMAX_DELAY);
-            // motor_control_state = STARTING;
             if (g_pui32ButtonPressed == USR_SW1)
             {
                 motor_control_state = STARTING;
+                LEDWrite(LED_D1, LED_D1);
                 g_pui32ButtonPressed = 0;
             }
-
-            // UARTprintf("The State is %d\n\n", motor_control_state);
             break;
         case STARTING:
-            LEDWrite(LED_D1, LED_D1);
-            // motor_error = desired_duty - duty_value;
-            // duty_value = PID(motor_error, duty_value);
-            // setDuty(duty_value);
-            // if(motor_error == 0){
-            // UARTprintf("The State is %d\n\n", motor_control_state);
+            /* Kick start the motor */
 
-            // Set the desired speed to START_SPEED. Once speed has reached this speed, startup is complete and the motor is in run state
-            desired_speed_RPM = START_SPEED;
-            if (desired_speed_RPM > (START_SPEED - SPEED_THRESHOLD) && desired_speed_RPM < (START_SPEED + SPEED_THRESHOLD))
-            {
-                motor_control_state = RUNNING;
-            }
+            // 1. Read hall effect sensors
+            //  Do an initial read of the hall effect sensor GPIO lines
+            Hall_A = (GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_3) >> 3) & 0x01;
 
-            //};
+            // UARTprintf("\nHall A: %d", Hall_A);
+
+            Hall_B = (GPIOPinRead(GPIO_PORTH_BASE, GPIO_PIN_2) >> 2) & 0x01;
+
+            // UARTprintf("\nHall B: %d", Hall_B);
+
+            Hall_C = (GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_2) >> 2) & 0x01;
+
+            // UARTprintf("\nHall C: %d\n", Hall_C);
+
+            // give the read hall effect sensor lines to updateMotor() to move the motor
+            updateMotor(Hall_A, Hall_B, Hall_C);
+
+            enableMotor();
+            motor_control_state = RUNNING;
             break;
         case RUNNING:
+
             if (xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS)
             {
-                next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
-                setDuty(next_duty_shared);
+                if (stopping_flag)
+                {
+                    next_duty_shared = RPM_to_Duty_Equation(PID(0, current_speed_RPM, &integral_error));
+                    if (next_duty_shared < 15)
+                    {
+                        next_duty_shared = 0;
+                        setDuty(next_duty_shared);
+                        disableMotor();
+                        stopping_flag = false;
+                        motor_control_state = IDLE;
+                    }
+                    else
+                    {
+                        setDuty(next_duty_shared);
+                    }
+                }
+                else
+                {
+
+                    next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
+                    setDuty(next_duty_shared);
+                }
             }
-            // if (duty_value < desired_duty){
-            //     duty_value += 1;
-            // }
-            // setDuty(duty_value);
-
-            // Send
-            desired_speed_RPM_shared = desired_speed_RPM;
-            xSemaphoreGive(xSharedDutyWithMotor);
-
-            // UARTprintf("The State is %d\n\n", motor_control_state);
 
             // This should trigger the motor to decelerate until the speed is 0, once speed has reached zero, then set the control state to IDLE
             if (g_pui32ButtonPressed == USR_SW2)
             {
-                desired_speed_RPM = 0; // <-- THIS WOULD BE WRONG, just not sure how we do it
-                // motor_control_state = IDLE;
+                stopping_flag = true;
                 // Resets button pressed status
                 g_pui32ButtonPressed = 0;
             }
-            if (desired_speed_RPM < (0 + SPEED_THRESHOLD))
-            {
-                motor_control_state = IDLE;
-            }
 
-            // UARTprintf("Desured Value: %d\n", desired_duty);
-            // UARTprintf("Error Value: %d\n", motor_error);
-
-            // UARTprintf("Duty Value: %d\n", duty_value);
             break;
         case E_STOPPING:
             if (xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS)
             {
-                desired_speed_RPM = 0;
                 next_duty_shared = RPM_to_Duty_Equation(ESTOP_Controller(current_speed_RPM));
                 if (next_duty_shared < 15)
                 {
