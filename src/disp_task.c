@@ -149,6 +149,13 @@ DataRange Accel_Data_Range;
 DataRange Power_Data_Range;
 DataRange Speed_Data_Range;
 
+/* Message receiving */
+EventBits_t DisplayBits;
+SensorMsg xReceivedMessage;
+SensorMsg xLuxReceivedMessage;
+CalcMsg   xAccelReceivedMessage;
+SensorMsg xPowerReceivedMessage;
+SensorMsg xSpeedReceivedMessage;
 uint8_t current_array_size = 0;
 
 /* Initialise Data Arrays for plotting */
@@ -985,13 +992,7 @@ void init_display( void )
 void update_data_arrays(void)
 {
     const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
-    EventBits_t DisplayBits;
-    SensorMsg xReceivedMessage;
-    SensorMsg xLuxReceivedMessage;
-    CalcMsg   xAccelReceivedMessage;
-    SensorMsg xPowerReceivedMessage;
-    SensorMsg xSpeedReceivedMessage;
-
+    
     /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
     DisplayBits = xEventGroupWaitBits(xSensorEventGroup,   /* The event group being tested. */
                                 LUX_DATA_READY | ACCEL_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY, /* The bits within the event group to wait for. */
@@ -1183,7 +1184,7 @@ void vPlotSoftwareTimer( void )
     // Create a timer
     TimerHandle_t xPlotTimer = xTimerCreate(
         "Timer",                // Name of the timer
-        pdMS_TO_TICKS(1000),    // Timer period in ticks (1 second here)
+        pdMS_TO_TICKS(500),    // Timer period in ticks (1 second here)
         pdTRUE,                 // Auto-reload
         (void *)0,              // Timer ID
         vPlotTimerCallback      // Callback function
