@@ -78,6 +78,7 @@ SemaphoreHandle_t xSharedDutyWithMotor = NULL;
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
 SemaphoreHandle_t xPlotTimerSemaphore = NULL;
+SemaphoreHandle_t xAccelTimerSemaphore = NULL;
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
@@ -135,6 +136,7 @@ int main(void)
     xADCSemaphore = xSemaphoreCreateBinary();
     xSpeedSemaphore = xSemaphoreCreateBinary();
     xTimerSemaphore = xSemaphoreCreateBinary();
+    xAccelTimerSemaphore = xSemaphoreCreateBinary();
     xESTOPSemaphore = xSemaphoreCreateBinary();
     xControllerSemaphore = xSemaphoreCreateBinary();
     xPlotTimerSemaphore = xSemaphoreCreateBinary();
