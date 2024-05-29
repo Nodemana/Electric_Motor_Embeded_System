@@ -83,7 +83,7 @@
 #define NUM_SENSORS     4
 #define Y_AXIS_ORIGIN   178
 #define Y_AXIS_LENGTH   132
-#define X_AXIS_ORIGIN   40
+#define X_AXIS_ORIGIN   45
 #define X_AXIS_LENGTH   190
 
 #define NUMBER_Y_TICKS  5
@@ -749,7 +749,7 @@ void xyPlaneDraw(DataRange data_range, bool grid_on)
     // Draw y axix
     GrLineDrawV(&sContext, X_AXIS_ORIGIN, Y_AXIS_ORIGIN, (Y_AXIS_ORIGIN - Y_AXIS_LENGTH));
      // Draw x axis
-    GrLineDrawH(&sContext, X_AXIS_ORIGIN, (X_AXIS_ORIGIN + X_AXIS_LENGTH), Y_AXIS_ORIGIN);
+    GrLineDrawH(&sContext, X_AXIS_ORIGIN, (X_AXIS_ORIGIN + X_AXIS_LENGTH-4), Y_AXIS_ORIGIN);
 
     // Draw y tick marks
     for (int i = 0; i < NUMBER_Y_TICKS; i++)
@@ -778,9 +778,9 @@ void clearAxis (int backround_colour )
 void clearScreen (int backround_colour )
 {
     tRectangle sRect;
-    sRect.i16XMin = X_AXIS_ORIGIN - 33;
+    sRect.i16XMin = X_AXIS_ORIGIN - 38;
     sRect.i16YMin = Y_AXIS_ORIGIN + 6.5;
-    sRect.i16XMax = X_AXIS_ORIGIN + X_AXIS_LENGTH + 5;
+    sRect.i16XMax = X_AXIS_ORIGIN + X_AXIS_LENGTH;
     sRect.i16YMax = Y_AXIS_ORIGIN - Y_AXIS_LENGTH - 8.5;
     GrContextForegroundSet(&sContext, ClrWhite);
     GrRectFill(&sContext, &sRect);
@@ -829,7 +829,7 @@ void plot_data(uint32_t * data_arr, DataRange data_range)
         //UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
         for (int i = 0; i < current_array_size; i++)
         {
-            x_data = X_AXIS_ORIGIN + (x_time_step * i) + 15;
+            x_data = X_AXIS_ORIGIN + (x_time_step * i) + 10;
             if (data_arr[i] >= data_range.max) 
             {
                 y_data = Y_AXIS_ORIGIN - Y_AXIS_LENGTH;
@@ -854,7 +854,7 @@ void plot_data(uint32_t * data_arr, DataRange data_range)
         GrContextForegroundSet(&sContext, ClrDarkBlue);
         for (int i = 0; i < NUMBER_DATA_POINTS; i++)
         {
-            x_data = X_AXIS_ORIGIN + (x_time_step * i) + 15;
+            x_data = X_AXIS_ORIGIN + (x_time_step * i) + 10;
             if (data_arr[i] > data_range.max) 
             {
                 y_data = Y_AXIS_ORIGIN - Y_AXIS_LENGTH;
@@ -1098,7 +1098,7 @@ static void prvPlotTask(void *pvParameters)
     Power_Data_Range.max = 100;
     Power_Data_Range.min = 0;
 
-    Speed_Data_Range.max = 900;
+    Speed_Data_Range.max = 12000;
     Speed_Data_Range.min = 0;
     for (;;)
     {
