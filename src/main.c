@@ -95,6 +95,10 @@ static void prvSetupHardware(void);
  * as the example is running. */
 static void prvConfigureUART(void);
 
+
+/* Set up buttons. */
+static void prvConfigureButton( void );
+
 /* Set up the I2C2 for temp and lux sensor. */
 static void prvConfigureI2C2(void);
 
@@ -301,6 +305,26 @@ static void prvConfigureTimers(void)
 
 /*-----------------------------------------------------------*/
 
+static void prvConfigureButton( void )
+{
+    /* Initialize the LaunchPad Buttons. */
+    ButtonsInit();
+
+    /* Configure both switches to trigger an interrupt on a falling edge. */
+    GPIOIntTypeSet(BUTTONS_GPIO_BASE, ALL_BUTTONS, GPIO_FALLING_EDGE);
+
+    /* Enable the interrupt for LaunchPad GPIO Port in the GPIO peripheral. */
+    GPIOIntEnable(BUTTONS_GPIO_BASE, ALL_BUTTONS);
+
+    /* Enable the Port J interrupt in the NVIC. */
+    IntEnable(INT_GPIOJ);
+
+    /* Enable global interrupts in the NVIC. */
+    IntMasterEnable();
+}
+
+/*-----------------------------------------------------------*/
+
 static void prvSetupHardware(void)
 {
     /* Run from the PLL at configCPU_CLOCK_HZ MHz. */
@@ -316,6 +340,9 @@ static void prvSetupHardware(void)
     prvConfigureUART();
 
     //Config_Timers();
+
+    /* Configure the button. */
+    prvConfigureButton();
 
     /* Configure the I2C2 for temp and lux sensor comms */
     prvConfigureI2C2();
