@@ -733,7 +733,7 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
 
     if (psWidget == (tWidget *)&g_psSliders[SPEED_INDEX])
     {
-        UARTprintf("Speed threshold = :%d", i32Value);
+        //UARTprintf("Speed threshold = :%d", i32Value);
         //
         // Yes - update the canvas to show the slider value.
         //

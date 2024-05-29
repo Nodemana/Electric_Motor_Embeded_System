@@ -83,7 +83,6 @@
  */
 
 #define FILTER_SIZE 10
-#define TIMER_TICKS_PER_SEC 100
 #define speedQUEUE_LENGTH (10)
 #define DECELERATION_RATE -1000
 
@@ -171,15 +170,15 @@ static void prvESTOPTask(void *pvParameters);
 /*
  * PID Controller
  */
-int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_error);
+float PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_error_ptr);
 int32_t ESTOP_Controller(int32_t current_speed, double elapsed_time);
-uint32_t RPM_to_Duty_Equation(int32_t RPM);
+uint32_t RPM_to_Duty_Equation_Step_Up(float RPM);
 
-int32_t GetAverage(int32_t *filter_pointer, uint32_t size);
-int32_t FilterData(int32_t newData, int32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size);
-void ShuffleData(int32_t *data, uint32_t size);
+int32_t GetAverage(int32_t *filter_pointer, int32_t size);
+int32_t FilterData(int32_t newData, int32_t *filter_pointer, int32_t speed_filter_current_size, int32_t max_filter_size);
+void ShuffleData(int32_t *data, int32_t size);
 
-int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size);
+int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, int32_t window_current_size, int32_t max_window_size);
 /*
  * Called by main() to initialise all motor associated tasks.
  */
@@ -235,7 +234,7 @@ static void prvMotorTask(void *pvParameters)
     // uint16_t desired_duty = 100;
 
     int32_t current_speed_RPM;
-    int32_t desired_speed_RPM;
+    int32_t desired_speed_RPM = 1400;
     int32_t integral_error = 0;
 
     bool stopping_flag = false;
@@ -304,7 +303,7 @@ static void prvMotorTask(void *pvParameters)
             {
                 if (stopping_flag)
                 {
-                    next_duty_shared = RPM_to_Duty_Equation(PID(0, current_speed_RPM, &integral_error));
+                    next_duty_shared = RPM_to_Duty_Equation_Step_Up(PID(0, current_speed_RPM, &integral_error));
                     if (next_duty_shared < 15)
                     {
                         next_duty_shared = 0;
@@ -321,7 +320,7 @@ static void prvMotorTask(void *pvParameters)
                 else
                 {
 
-                    next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
+                    next_duty_shared = RPM_to_Duty_Equation_Step_Up(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
                     setDuty(next_duty_shared);
                 }
             }
@@ -342,9 +341,9 @@ static void prvMotorTask(void *pvParameters)
                 ESTOP_Tick_Count_Now = xTaskGetTickCount();
                 ESTOP_Tick_Count = ESTOP_Tick_Count_Now - ESTOP_Tick_Count_Prev;
 
-                ESTOPTimeSinceLastTaskRun = (double)ESTOP_Tick_Count_Now / configTICK_RATE_HZ;
+                ESTOPTimeSinceLastTaskRun = (double)ESTOP_Tick_Count / configTICK_RATE_HZ;
 
-                next_duty_shared = RPM_to_Duty_Equation(ESTOP_Controller(current_speed_RPM, ESTOPTimeSinceLastTaskRun));
+                next_duty_shared = RPM_to_Duty_Equation_Step_Up(ESTOP_Controller(current_speed_RPM, ESTOPTimeSinceLastTaskRun));
                 if (next_duty_shared < 15)
                 {
                     next_duty_shared = 0;
@@ -378,8 +377,8 @@ static void prvSpeedSenseTask(void *pvParameters)
     int32_t acceleration_RPM_per_second_filter[FILTER_SIZE];
     int32_t acceleration_filter_current_size = 0;
 
-    // int32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
-    // int32_t window_current_size = 0;
+    int32_t revolutions_per_minute_one_second_window[TIMER_TICKS_PER_SEC];
+    int32_t window_current_size = 0;
 
     // TickType_t time_difference;
     TickType_t TickCount_Prev = 0;
@@ -426,18 +425,15 @@ static void prvSpeedSenseTask(void *pvParameters)
             // ESTOP CODE
             // if(xSemaphoreTake(xSharedSpeedESTOPThreshold, 0) == pdPASS)
             // {
-            if (filtered_revoltutions_per_minute > SpeedThreshold)
-            {
-                xSemaphoreGive(xESTOPSemaphore);
-            }
             // }
-
             // ACCELERATION
-            acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
-            //   acceleration_RPM_per_second = AccelerationCalculation(revolutions_per_minute, revolutions_per_minute_one_second_window, window_current_size, TIMER_TICKS_PER_SEC); // this is per 8th of a second.
-            //     if (window_current_size != (TIMER_TICKS_PER_SEC - 1)){
-            //         window_current_size += 1;
-            //     }
+            acceleration_RPM_per_second = AccelerationCalculation(revolutions_per_minute, revolutions_per_minute_one_second_window, window_current_size, TIMER_TICKS_PER_SEC); // this is per 8th of a second.
+            if (window_current_size != (TIMER_TICKS_PER_SEC - 1))
+            {
+                window_current_size += 1;
+            }
+            //acceleration_RPM_per_second = revolutions_per_minute - last_revolutions_per_minute;
+
             int32_t filtered_acceleration_RPM_per_second = FilterData(acceleration_RPM_per_second, acceleration_RPM_per_second_filter, acceleration_filter_current_size, FILTER_SIZE);
             if (acceleration_filter_current_size != (FILTER_SIZE - 1))
             {
@@ -454,18 +450,12 @@ static void prvSpeedSenseTask(void *pvParameters)
             }
             xSemaphoreGive(xControllerSemaphore);
 
-            // ANOTHER METHOD FOR ACCELERATION
-            // = AccelerationCalculation(revolutions_per_minute, revolutions_per_minute_one_second_window, window_current_size, TIMER_TICKS_PER_SEC); // this is per 8th of a second.
-            // if (window_current_size != (TIMER_TICKS_PER_SEC - 1)){
-            //     window_current_size += 1;
-            // }
-
             // DEBUG PRINTS
             // UARTprintf("Hall States: %d\n", hall_state_counter);
             // UARTprintf("RPS: %d\n", revolutions_per_second);
             // UARTprintf("RPM: %d\n", revolutions_per_minute);
-            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            // UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            // UARTprintf("RPM/s: %d\n\n", filtered_acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 
@@ -492,39 +482,40 @@ static void prvSpeedSenseTask(void *pvParameters)
     }
 }
 
-void ShuffleData(int32_t *data, uint32_t size)
+void ShuffleData(int32_t *data, int32_t size)
 {
     // Shift all elements to the left by one position
     for (uint32_t i = 0; i < size - 1; ++i)
     {
+        //UARTprintf("Shuffling Data: %d\n", data[i+1]);
         data[i] = data[i + 1];
     }
 }
 
-int32_t FilterData(int32_t newData, int32_t *filter_pointer, uint32_t speed_filter_current_size, uint32_t max_filter_size)
+int32_t FilterData(int32_t newData, int32_t *filter_pointer, int32_t speed_filter_current_size, int32_t max_filter_size)
 {
     if (speed_filter_current_size < (max_filter_size - 1))
     {
         // Buffer is not full, simply add the new data
         filter_pointer[speed_filter_current_size] = newData;
-        // UARTprintf("Added Data: %d\n",  filter_pointer[speed_filter_current_size]);
+        //UARTprintf("Added Data: %d\n",  filter_pointer[speed_filter_current_size]);
     }
     else
     {
         // Buffer is full, shuffle data and insert newData
         ShuffleData(filter_pointer, max_filter_size);
         filter_pointer[max_filter_size - 1] = newData; //
-        // UARTprintf("Added Data: %d\n", filter_pointer[max_filter_size - 1]);
+        //UARTprintf("Added Data: %d\n", filter_pointer[max_filter_size - 1]);
     }
     return GetAverage(filter_pointer, speed_filter_current_size);
 }
 
-int32_t GetAverage(int32_t *filter_pointer, uint32_t size)
+int32_t GetAverage(int32_t *filter_pointer, int32_t size)
 {
     int32_t sum = 0;
     for (uint32_t i = 0; i < size; i++)
     {
-        // UARTprintf("Summing Data: %d\n", filter_pointer[i]);
+        //UARTprintf("Summing Data: %d\n", filter_pointer[i]);
         if ((filter_pointer[i] > 20000) || (filter_pointer[i] < -20000))
         {
             sum += filter_pointer[i + 1 % FILTER_SIZE]; // This is disgusting
@@ -535,10 +526,12 @@ int32_t GetAverage(int32_t *filter_pointer, uint32_t size)
         }
     }
     // UARTprintf("END AVERAGE");
-    return sum / size;
+    // UARTprintf("Sum: %d\n", sum);
+    // UARTprintf("Avg: %d\n\n", (int32_t)(sum/size));
+    return (int32_t)(sum/size);
 }
 
-int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, uint32_t window_current_size, uint32_t max_window_size)
+int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, int32_t window_current_size, int32_t max_window_size)
 {
     if (window_current_size < (max_window_size - 1))
     {
@@ -556,53 +549,66 @@ int32_t AccelerationCalculation(int32_t newData, int32_t *window_pointer, uint32
     return window_pointer[window_current_size - 1] - window_pointer[0];
 }
 
-uint32_t RPM_to_Duty_Equation(int32_t RPM)
+uint32_t RPM_to_Duty_Equation_Step_Up(float RPM)
 {
-    // UARTprintf("Conversion: %d\n", (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686)));
-    return (uint32_t)round((0.0000006 * (RPM * RPM) + 0.0003 * RPM + 13.686));
+    static float decimal_sum = 0;
+    decimal_sum += round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686)) - (0.0000006 * (RPM * RPM) + 0.0003 * RPM + 13.686);
+    if(decimal_sum > 1){
+        decimal_sum = 0;
+        UARTprintf("Conversion: %d\n", (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686)) + 1);
+        return (uint32_t)round(0.0000006 * (RPM * RPM) + 0.0003 * RPM + 13.686) + 1;
+    }
+    UARTprintf("Conversion: %d\n", (uint32_t)round((0.0000006 * (RPM*RPM) + 0.0003*RPM + 13.686)));
+    return (uint32_t)round(0.0000006 * (RPM * RPM) + 0.0003 * RPM + 13.686);
 }
 
 /*
  * PID Controller
  */
 
-int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_error_ptr)
+float PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_error_ptr)
 {
     float Kp = 2;
-    float Ki = 1;
-    // UARTprintf("Desired RPM: %d\n", desired_speed);
-    // UARTprintf("Current RPM: %d\n", current_speed);
+    float Ki = 2;
+    UARTprintf("Desired RPM: %d\n", desired_speed);
+    UARTprintf("Current RPM: %d\n", current_speed);
 
     int32_t acceleration = (desired_speed - current_speed);
     *integral_error_ptr += acceleration; // Accumulate the integral error
-    if (*integral_error_ptr > 100)
+    if (*integral_error_ptr > 200)
     {
-        *integral_error_ptr = 100;
+        *integral_error_ptr = 200;
     }
-    if (*integral_error_ptr < -100)
+    if (*integral_error_ptr < -200)
     {
-        *integral_error_ptr = -100;
+        *integral_error_ptr = -200;
     }
-    // UARTprintf("Acceleration/Error: %d\n", acceleration);
-    // UARTprintf("Integral Error: %d\n", *integral_error_ptr);
+    UARTprintf("Acceleration/Error: %d\n", acceleration);
+    UARTprintf("Integral Error: %d\n", *integral_error_ptr);
     int32_t total_error = acceleration;
-    if (total_error > 500)
+    if (total_error > 100)
     {
-        total_error = 500;
+        total_error = 100;
     }
-    if (total_error < -500)
+    if (total_error < -100)
     {
-        total_error = -500;
+        total_error = -100;
     }
-    // UARTprintf("Minned Acceleration/Error: %d\n", total_error);
-    // UARTprintf("Output: %d\n\n", (int32_t)round(current_speed + total_error * Kp + (*integral_error_ptr * Ki))); //  + (*integral_error_ptr * Ki)
+    UARTprintf("Minned Acceleration/Error: %d\n", total_error);
+    UARTprintf("Output: %d\n\n", (int32_t)round(current_speed + total_error * Kp + (*integral_error_ptr * Ki))); //  + (*integral_error_ptr * Ki)
 
-    return (int32_t)round(current_speed + total_error * Kp + (*integral_error_ptr * Ki)); // + (*integral_error_ptr * Ki)
+    return (float)current_speed + (float)total_error * Kp + ((float)*integral_error_ptr * Ki); // + (*integral_error_ptr * Ki)
 }
 
 int32_t ESTOP_Controller(int32_t current_speed, double elapsed_time)
-{
+{   
     int32_t change_in_speed = DECELERATION_RATE * elapsed_time;
+
+    UARTprintf("Elapsed Time: %d\n", (int)elapsed_time);
+    UARTprintf("Current Speed: %d\n", current_speed);
+    UARTprintf("Change in Speed: %d\n", change_in_speed);
+    UARTprintf("Next Speed: %d\n", (int32_t)round(current_speed + change_in_speed));
+
     return (int32_t)round(current_speed + change_in_speed);
 }
 

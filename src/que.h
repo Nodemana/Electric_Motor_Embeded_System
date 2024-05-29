@@ -71,6 +71,8 @@
 #define POWER_QUEUE_LENGTH (4)          // Que length for the power sensor
 #define SPEED_QUEUE_LENGTH (4)          // Que length for the speed sensor
 
+#define TIMER_TICKS_PER_SEC 100
+
 /* ------------------------------------------------------------------------------------------------
  *                                           Variables
  * -------------------------------------------------------------------------------------------------
