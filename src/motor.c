@@ -83,8 +83,9 @@
  */
 
 #define FILTER_SIZE 10
-#define TIMER_TICKS_PER_SEC 10
+#define TIMER_TICKS_PER_SEC 100
 #define speedQUEUE_LENGTH (10)
+#define DECELERATION_RATE -1000
 
 struct Message
 {
@@ -144,6 +145,7 @@ int32_t acceleration_RPM_per_second_shared;
 int32_t desired_speed_RPM_shared;
 uint32_t next_duty_shared;
 int32_t integral_error = 0;
+TickType_t ESTOP_Tick_Count_Prev;
 
 /*
  * Time stamp global variable.
@@ -170,7 +172,7 @@ static void prvESTOPTask(void *pvParameters);
  * PID Controller
  */
 int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_error);
-int32_t ESTOP_Controller(int32_t current_speed);
+int32_t ESTOP_Controller(int32_t current_speed, double elapsed_time);
 uint32_t RPM_to_Duty_Equation(int32_t RPM);
 
 int32_t GetAverage(int32_t *filter_pointer, uint32_t size);
@@ -220,6 +222,7 @@ static void prvESTOPTask(void *pvParameters)
     {
         if (xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS)
         {
+            ESTOP_Tick_Count_Prev = xTaskGetTickCount();
             motor_control_state = E_STOPPING;
         }
     }
@@ -236,6 +239,10 @@ static void prvMotorTask(void *pvParameters)
     int32_t integral_error = 0;
 
     bool stopping_flag = false;
+    TickType_t ESTOP_Tick_Count_Now;
+    TickType_t ESTOP_Tick_Count;
+
+    double ESTOPTimeSinceLastTaskRun;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
@@ -331,7 +338,13 @@ static void prvMotorTask(void *pvParameters)
         case E_STOPPING:
             if (xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS)
             {
-                next_duty_shared = RPM_to_Duty_Equation(ESTOP_Controller(current_speed_RPM));
+
+                ESTOP_Tick_Count_Now = xTaskGetTickCount();
+                ESTOP_Tick_Count = ESTOP_Tick_Count_Now - ESTOP_Tick_Count_Prev;
+
+                ESTOPTimeSinceLastTaskRun = (double)ESTOP_Tick_Count_Now / configTICK_RATE_HZ;
+
+                next_duty_shared = RPM_to_Duty_Equation(ESTOP_Controller(current_speed_RPM, ESTOPTimeSinceLastTaskRun));
                 if (next_duty_shared < 15)
                 {
                     next_duty_shared = 0;
@@ -343,7 +356,9 @@ static void prvMotorTask(void *pvParameters)
                 {
                     setDuty(next_duty_shared);
                 }
+                ESTOP_Tick_Count_Prev = ESTOP_Tick_Count_Now;
             }
+            desired_speed_RPM = 0;
             break;
         default:
             return -1;
@@ -397,7 +412,7 @@ static void prvSpeedSenseTask(void *pvParameters)
 
             revolutions_per_second_double = num_revs / TimeSinceLastTaskRun;
 
-            int32_t revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/10 of a second. 12 Hall states in one revolution.
+            int32_t revolutions_per_second = (int)round(revolutions_per_second_double); // Timer runs at 1/100 of a second. 12 Hall states in one revolution.
 
             int32_t revolutions_per_minute = revolutions_per_second * 60;
             // UARTprintf("RPM before filtered: %d\n", revolutions_per_minute);
@@ -585,10 +600,10 @@ int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_erro
     return (int32_t)round(current_speed + total_error * Kp + (*integral_error_ptr * Ki)); // + (*integral_error_ptr * Ki)
 }
 
-int32_t ESTOP_Controller(int32_t current_speed)
+int32_t ESTOP_Controller(int32_t current_speed, double elapsed_time)
 {
-    int32_t acceleration = -1000;
-    return (int32_t)round(current_speed + acceleration);
+    int32_t change_in_speed = DECELERATION_RATE * elapsed_time;
+    return (int32_t)round(current_speed + change_in_speed);
 }
 
 /*-----------------------------------------------------------*/
