@@ -51,13 +51,13 @@
  */
 /* Message ID's of each task */
 #define LUX_MESSAGE      0              // Message ID for the light sensor
-#define TEMP_MESSAGE     1              // Message ID for the temperatur sensor
+#define ACCEL_MESSAGE    1              // Message ID for the temperatur sensor
 #define POWER_MESSAGE    2              // Message ID for the power sensor
 #define SPEED_MESSAGE    3              // Message ID for the speed sensor
 
 /* Event Bits to set of each task when data has been read */
 #define LUX_DATA_READY      (1 << 0)    // New data from light sensor is ready
-#define TEMP_DATA_READY     (1 << 1)    // New data from temperatur sensor is ready
+#define ACCEL_DATA_READY    (1 << 1)    // New data from temperatur sensor is ready
 #define POWER_DATA_READY    (1 << 2)    // New data from power sensor is ready
 #define SPEED_DATA_READY    (1 << 3)    // New data from speed sensor is ready
 
@@ -66,8 +66,8 @@
  * will remove items as they are added, meaning the send task should always find
  * the queue empty.
  */
-#define LUX_QUEUE_LENGTH (4)            // Que length for the light sensor
-#define TEMP_QUEUE_LENGTH (4)           // Que length for the temperature sensor
+#define LUX_QUEUE_LENGTH   (4)          // Que length for the light sensor
+#define ACCEL_QUEUE_LENGTH (4)          // Que length for the temperature sensor
 #define POWER_QUEUE_LENGTH (4)          // Que length for the power sensor
 #define SPEED_QUEUE_LENGTH (4)          // Que length for the speed sensor
 
@@ -102,7 +102,7 @@ extern EventGroupHandle_t xSensorEventGroup;
  * One has been created for each sensor
  */
 extern QueueHandle_t xLuxSensorQueue;
-extern QueueHandle_t xTempSensorQueue;
+extern QueueHandle_t xAccelSensorQueue;
 extern QueueHandle_t xPowerSensorQueue;
 extern QueueHandle_t xSpeedSensorQueue;
 

@@ -323,7 +323,7 @@ tSliderWidget g_psSliders[] =
                      (SL_STYLE_FILL | SL_STYLE_BACKG_FILL | SL_STYLE_OUTLINE |
                       SL_STYLE_TEXT | SL_STYLE_BACKG_TEXT),
                      ClrRed, ClrGray, ClrSilver, ClrWhite, ClrWhite,
-                     &g_sFontCm20, "Temp", 0, 0, OnSliderChange),
+                     &g_sFontCm20, "Acceleration", 0, 0, OnSliderChange),
         SliderStruct(g_psPanels, g_psSliders + 3, 0,
                      &g_sKentec320x240x16_SSD2119, 10, 157, 220, 25, 0, 100, 25,
                      (SL_STYLE_FILL | SL_STYLE_BACKG_FILL | SL_STYLE_OUTLINE |
@@ -383,7 +383,7 @@ tRadioButtonWidget g_psRadioButtons[] =
         RadioButtonStruct(g_psRadioContainers, g_psRadioButtons + 3, 0,
                           &g_sKentec320x240x16_SSD2119, 240, 110, 80, 45,
                           RB_STYLE_TEXT, 16, 0, ClrSilver, ClrSilver, &g_sFontCm20,
-                          "Temp", 0, OnRadioChange),
+                          "Accel", 0, OnRadioChange),
         RadioButtonStruct(g_psRadioContainers, 0, 0,
                           &g_sKentec320x240x16_SSD2119, 240, 145, 80, 45,
                           RB_STYLE_TEXT, 16, 0, ClrSilver, ClrSilver, &g_sFontCm20,
@@ -978,13 +978,13 @@ void update_data_arrays(void)
     EventBits_t DisplayBits;
     SensorMsg xReceivedMessage;
     SensorMsg xLuxReceivedMessage;
-    SensorMsg xTempReceivedMessage;
+    SensorMsg xAccelReceivedMessage;
     SensorMsg xPowerReceivedMessage;
     SensorMsg xSpeedReceivedMessage;
 
     /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
     DisplayBits = xEventGroupWaitBits(xSensorEventGroup,   /* The event group being tested. */
-                                LUX_DATA_READY | TEMP_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY, /* The bits within the event group to wait for. */
+                                LUX_DATA_READY | ACCEL_DATA_READY | POWER_DATA_READY | SPEED_DATA_READY, /* The bits within the event group to wait for. */
                                 pdTRUE,        /* BIT_0 & BIT_4 should be cleared before returning. */
                                 pdFALSE,       /* Don't wait for both bits, either bit will do. */
                                 xTicksToWait); /* Wait a maximum of 100ms for either bit to be set. */
@@ -1008,20 +1008,20 @@ void update_data_arrays(void)
     }
 
     /*** TEMP ***/
-    if ( ( ( DisplayBits & (TEMP_DATA_READY) ) == (TEMP_DATA_READY) ) )
+    if ( ( ( DisplayBits & (ACCEL_DATA_READY) ) == (ACCEL_DATA_READY) ) )
     {
-        if (xQueueReceive(xTempSensorQueue,
-                    &(xTempReceivedMessage),
+        if (xQueueReceive(xAccelSensorQueue,
+                    &(xAccelReceivedMessage),
                     (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
-            // update_data_array(temp_data, xTempReceivedMessage.SensorReading);
+            // update_data_array(temp_data, xAccelReceivedMessage.SensorReading);
         }
     }
     else if (current_array_size > 0)
     {
         // Update data array with old data to plot
-        // update_data_array(temp_data, xTempReceivedMessage.SensorReading);
+        // update_data_array(temp_data, xAccelReceivedMessage.SensorReading);
     }
 
     /*** POWER ***/
@@ -1174,7 +1174,7 @@ void vPlotSoftwareTimer( void )
         pdMS_TO_TICKS(1000),    // Timer period in ticks (1 second here)
         pdTRUE,                 // Auto-reload
         (void *)0,              // Timer ID
-        vPlotTimerCallback          // Callback function
+        vPlotTimerCallback      // Callback function
     );
 
     // Check if the timer was created successfully

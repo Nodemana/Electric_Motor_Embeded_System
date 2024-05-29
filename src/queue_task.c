@@ -12,7 +12,7 @@ void vQueueTask(void);
  * The is the message structure to send from sensor task to other tasks (e.g. display)
  */
 QueueHandle_t xLuxSensorQueue = NULL;
-QueueHandle_t xTempSensorQueue = NULL;
+QueueHandle_t xAccelSensorQueue = NULL;
 QueueHandle_t xPowerSensorQueue = NULL;
 QueueHandle_t xSpeedSensorQueue = NULL;
 
@@ -30,7 +30,7 @@ void vQueueTask(void)
     nothing uses the queue until after it has been created. */
     xLuxSensorQueue = xQueueCreate(
         /* The number of items the queue can hold. */
-        TEMP_QUEUE_LENGTH,
+        LUX_QUEUE_LENGTH,
         /* Size of each item is big enough to hold the
         whole structure. */
         sizeof(SensorMsg));
@@ -45,6 +45,13 @@ void vQueueTask(void)
     xPowerSensorQueue = xQueueCreate(
                 /* The number of items the queue can hold. */
                 POWER_QUEUE_LENGTH,
+                /* Size of each item is big enough to hold the
+                whole structure. */
+                sizeof( CalcMsg ) );
+
+    xAccelSensorQueue = xQueueCreate(
+                /* The number of items the queue can hold. */
+                ACCEL_QUEUE_LENGTH,
                 /* Size of each item is big enough to hold the
                 whole structure. */
                 sizeof( CalcMsg ) );
