@@ -150,10 +150,12 @@ static void prvESTOPControllerTask(void *pvParameters)
         if(motor_control_state == E_STOPPING)
         {
             xSemaphoreGive(xESTOPSemaphore);
+        } else {
+            if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
+                motor_control_state = E_STOPPING;
+                vTaskPrioritySet( ESTOPSpeedSenseHandle, tskIDLE_PRIORITY + 3 );
+            }
         }
-        if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
-            motor_control_state = E_STOPPING;
-            vTaskPrioritySet( ESTOPSpeedSenseHandle, tskIDLE_PRIORITY + 3 );
-        }
+
     }
 }

@@ -121,8 +121,6 @@ extern SemaphoreHandle_t xSharedDutyWithController;
 extern SemaphoreHandle_t xSharedSetSpeedFromGUI;
 extern SemaphoreHandle_t xSharedAccelerationThresholdFromGUI;
 
-
-
 // Binary Semaphores
 extern SemaphoreHandle_t xESTOPSemaphore;
 extern SemaphoreHandle_t xControllerSemaphore;
@@ -159,8 +157,6 @@ enum states motor_control_state = STARTING;
 static void prvMotorTask(void *pvParameters);
 static void prvSpeedSenseTask(void *pvParameters);
 static void prvESTOPTask(void *pvParameters);
-static void prvMotorControllerTask(void *pvParameters);
-
 
 /*
  * PID Controller
@@ -202,13 +198,6 @@ void vCreateMotorTask(void)
                 tskIDLE_PRIORITY + 1,
                 NULL);
 
-    xTaskCreate(prvMotorControllerTask,
-                "PID",
-                configMINIMAL_STACK_SIZE,
-                NULL,
-                tskIDLE_PRIORITY + 2,
-                NULL);
-
     xTaskCreate(prvESTOPTask,
                 "ESTOP",
                 configMINIMAL_STACK_SIZE,
@@ -223,49 +212,6 @@ static void prvESTOPTask(void *pvParameters)
     for(;;) {
         if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
             motor_control_state = E_STOPPING;
-
-        }
-    }
-}
-
-static void prvMotorControllerTask(void *pvParameters)
-{
-    int32_t current_speed_RPM = NULL;
-    int32_t desired_speed_RPM = 0;
-    int32_t integral_error = 0;
-
-    for(;;) {
-        if(xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS){
-            if (xSemaphoreTake(xSharedSpeedWithController, portMAX_DELAY) == pdPASS) {
-                    // Receive
-                    current_speed_RPM = revolutions_per_minute_shared;
-                    // UARTprintf("Speed: %d\n", current_speed_RPM);
-                    // UARTprintf("State: %d\n", motor_control_state);
-                    //acceleration_RPM_per_second = acceleration_RPM_per_second_shared;
-                    xSemaphoreGive(xSharedSpeedWithController);
-            }
-            if (xSemaphoreTake(xSharedDutyWithMotor, portMAX_DELAY) == pdPASS) {
-                if(motor_control_state == E_STOPPING){
-                    next_duty_shared = RPM_to_Duty_Equation(ESTOP_Controller(current_speed_RPM));
-                } else if(motor_control_state == RUNNING) {
-                    // Recieve
-                    desired_speed_RPM = desired_speed_RPM_shared;
-                    // UARTprintf("Desired Speed: %d\n", desired_speed_RPM);
-                    // UARTprintf("Speed: %d\n", current_speed_RPM);
-                    // Send
-                    next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
-                    //UARTprintf("Next Duty: %d\n", next_duty_shared);
-                } 
-                // UARTprintf("Next Duty: %d\n", next_duty_shared);
-                xSemaphoreGive(xSharedDutyWithMotor);
-            }
-
-            
-            // UARTprintf("Desired RPM: %d\n", desired_speed_RPM);
-            // UARTprintf("RPM: %d\n", current_speed_RPM);
-            // UARTprintf("RPM/s: %d\n", acceleration_RPM_per_second);
-            
-
         }
     }
 }
@@ -276,7 +222,9 @@ static void prvMotorTask(void *pvParameters)
     uint16_t period_value = 100;
     //uint16_t desired_duty = 100;
 
+    int32_t current_speed_RPM;
     int32_t desired_speed_RPM = 1500;
+    int32_t integral_error = 0;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
@@ -305,64 +253,44 @@ static void prvMotorTask(void *pvParameters)
     enableMotor();
     for (;;)
     {
+        if (xSemaphoreTake(xSharedSpeedWithController, portMAX_DELAY) == pdPASS) {
+                    // Receive
+                    current_speed_RPM = revolutions_per_minute_shared;
+                    // UARTprintf("Speed: %d\n", current_speed_RPM);
+                    // UARTprintf("State: %d\n", motor_control_state);
+                    xSemaphoreGive(xSharedSpeedWithController);
+        }
+        
         if(xSemaphoreTake(xSharedSetSpeedFromGUI, 0) == pdPASS) {
             desired_speed_RPM = Shared_Set_Speed;
-            //UARTprintf("desired_speed_RPM: %d\n", desired_speed_RPM);
-
             xSemaphoreGive(xSharedSetSpeedFromGUI);
         }
+
         switch (motor_control_state)
         {
         case IDLE:
-            //UARTprintf("IDLE");
-            //vTaskDelay(portMAX_DELAY);
-            //motor_control_state = STARTING;
             break;
         case STARTING:
-            // motor_error = desired_duty - duty_value;
-            // duty_value = PID(motor_error, duty_value);
-            // setDuty(duty_value);
-            // if(motor_error == 0){
             motor_control_state = RUNNING;
-            //};
             break;
         case RUNNING:
-            //UARTprintf("RUNNING");
-            if (xSemaphoreTake(xSharedDutyWithMotor, 0) == pdPASS) {
-                // Recieve
+            if(xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS){
+                next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
                 setDuty(next_duty_shared);
-                // if (duty_value < desired_duty){
-                //     duty_value += 1;
-                // }
-                // setDuty(duty_value);
-
-                // Send
-                desired_speed_RPM_shared = desired_speed_RPM;
-                xSemaphoreGive(xSharedDutyWithMotor);
             }
-
-            // UARTprintf("Desured Value: %d\n", desired_duty);
-            // UARTprintf("Error Value: %d\n", motor_error);
-
-            // UARTprintf("Duty Value: %d\n", duty_value);
             break;
         case E_STOPPING:
-            desired_speed_RPM = 0;
-            if (xSemaphoreTake(xSharedDutyWithMotor, 0) == pdPASS) {
-                //UARTprintf("ESTOPPING");
+            if(xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS){
+                desired_speed_RPM = 0;
+                next_duty_shared = RPM_to_Duty_Equation(ESTOP_Controller(current_speed_RPM));
                 if(next_duty_shared < 15){
                     next_duty_shared = 0;
                     setDuty(next_duty_shared);
                     disableMotor();
                     motor_control_state = IDLE;
                 } else {
-                    // Recieve
                     setDuty(next_duty_shared);
-
-                    // Send
-                    desired_speed_RPM_shared = desired_speed_RPM;
                 }
-                xSemaphoreGive(xSharedDutyWithMotor);
             }
             break;
         default:
@@ -454,7 +382,6 @@ static void prvSpeedSenseTask(void *pvParameters)
                 //UARTprintf("Before Shared RPM %d\n", filtered_revoltutions_per_minute);
                 revolutions_per_minute_shared = filtered_revoltutions_per_minute;
                 acceleration_RPM_per_second_shared = filtered_acceleration_RPM_per_second;
-                time_step_shared = TimeSinceLastTaskRun;
                 xSemaphoreGive(xSharedSpeedWithController);
             }
             xSemaphoreGive(xControllerSemaphore);
@@ -599,7 +526,7 @@ int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_erro
 }
 
 int32_t ESTOP_Controller(int32_t current_speed) {
-    int32_t acceleration = -2000;
+    int32_t acceleration = -1000;
     return (int32_t)round(current_speed + acceleration); 
 }
 
