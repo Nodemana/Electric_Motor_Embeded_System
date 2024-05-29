@@ -142,7 +142,7 @@ Sensors selected_sensor;
 
 uint8_t sensors[NUM_SENSORS] = {DRAW_SPEED, DRAW_POWER, DRAW_TEMP, DRAW_LUX};
 
-uint32_t SpeedThreshold = 10000;
+uint32_t SpeedThreshold = 15000;
 
 /*
  * data struct
@@ -171,11 +171,11 @@ bool state_changed = false;
 
 /* Slider Values*/
 uint32_t Set_Speed;
-uint32_t Power_Threshold;
+uint32_t Power_Threshold = 50;
 uint32_t Acceleration_Threshold;
 
 uint32_t Shared_Set_Speed;
-double Shared_Power_Threshold;
+uint32_t Shared_Power_Threshold = 50;
 double Shared_Acceleration_Threshold;
 
 
@@ -711,7 +711,7 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         // Yes - update the canvas to show the slider value.
         //
         Power_Threshold = i32Value;
-        usprintf(pcSliderText, "Power = %3d", i32Value);
+        usprintf(pcSliderText, "%3d W", i32Value);
         SliderTextSet(&g_psSliders[0], pcSliderText);
         WidgetPaint((tWidget *)&g_psSliders[0]);
     }
