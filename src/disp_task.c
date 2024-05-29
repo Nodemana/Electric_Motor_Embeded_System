@@ -89,10 +89,15 @@
 #define NUMBER_Y_TICKS 5
 #define NUMBER_DATA_POINTS 30
 
-#define DRAW_LUX (0)
-#define DRAW_TEMP (1)
-#define DRAW_POWER (2)
-#define DRAW_SPEED (3)
+#define DRAW_LUX        (0)
+#define DRAW_TEMP       (1)
+#define DRAW_POWER      (2)
+#define DRAW_SPEED      (3)
+
+#define POWER_THRESHOLD_SCALER 0.5
+#define SET_SPEED_SCALER 120
+#define ACCELERATION_THRESHOLD_SCALER 0.1
+
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Extern Global Variables
@@ -103,6 +108,12 @@ extern uint32_t g_ui32SysClock;
 
 /* Semaphore */
 extern SemaphoreHandle_t xPlotTimerSemaphore;
+extern SemaphoreHandle_t xSharedSetSpeedFromGUI;
+extern SemaphoreHandle_t xSharedPowerThresholdFromGUI;
+extern SemaphoreHandle_t xSharedAccelerationThresholdFromGUI;
+
+
+
 
 /*
  * The is the event group which tasks will read (i.e. GUI, E-STOP conditions)
@@ -167,6 +178,18 @@ float power_data[NUMBER_DATA_POINTS] = {0};
 float speed_data[NUMBER_DATA_POINTS] = {0};
 
 bool state_changed = false;
+
+/* Slider Values*/
+uint32_t Set_Speed;
+uint32_t Power_Threshold;
+uint32_t Acceleration_Threshold;
+
+uint32_t Shared_Set_Speed;
+double Shared_Power_Threshold;
+double Shared_Acceleration_Threshold;
+
+
+
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
  * -------------------------------------------------------------------------------------------------
@@ -700,7 +723,7 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
 
     if (psWidget == (tWidget *)&g_psSliders[0])
     {
-        UARTprintf("Speed threshold = :%d", i32Value);
+        UARTprintf("Power threshold = :%d", i32Value);
         //
         // Yes - update the canvas to show the slider value.
         //
@@ -708,6 +731,31 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         SliderTextSet(&g_psSliders[0], pcSliderText);
         WidgetPaint((tWidget *)&g_psSliders[0]);
     }
+
+    if (psWidget == (tWidget *)&g_psSliders[1])
+    {
+        UARTprintf("Acceleration threshold = :%d", i32Value);
+        //
+        // Yes - update the canvas to show the slider value.
+        //
+        Acceleration_Threshold = i32Value;
+        usprintf(pcSliderText, "%3d%%", i32Value);
+        SliderTextSet(&g_psSliders[1], pcSliderText);
+        WidgetPaint((tWidget *)&g_psSliders[1]);
+    }
+
+    if (psWidget == (tWidget *)&g_psSliders[3])
+    {
+        UARTprintf("Speed threshold = :%d", i32Value);
+        //
+        // Yes - update the canvas to show the slider value.
+        //
+        Set_Speed = i32Value;
+        usprintf(pcSliderText, "%3d%%", i32Value);
+        SliderTextSet(&g_psSliders[3], pcSliderText);
+        WidgetPaint((tWidget *)&g_psSliders[3]);
+    }
+
 }
 
 //*****************************************************************************
@@ -1113,6 +1161,7 @@ void update_data_arrays(void)
         // Update data array with old data to plot
         update_data_array(speed_data, (float)xSpeedReceivedMessage.SensorReading);
     }
+
 }
 //*****************************************************************************
 //
@@ -1132,6 +1181,21 @@ static void prvDisplayTask(void *pvParameters)
         // Process any messages in the widget message queue.
         //
         WidgetMessageQueueProcess();
+
+        if(xSemaphoreTake(xSharedSetSpeedFromGUI, 0) == pdPASS) {
+            Shared_Set_Speed = Set_Speed * SET_SPEED_SCALER;
+            xSemaphoreGive(xSharedSetSpeedFromGUI);
+        }
+
+        if(xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS) {
+            Shared_Power_Threshold = (double)Power_Threshold * POWER_THRESHOLD_SCALER;
+            xSemaphoreGive(xSharedPowerThresholdFromGUI);
+        }
+        
+        if(xSemaphoreTake(xSharedAccelerationThresholdFromGUI, 0) == pdPASS) {
+            Shared_Acceleration_Threshold = (double)Acceleration_Threshold * ACCELERATION_THRESHOLD_SCALER;
+            xSemaphoreGive(xSharedAccelerationThresholdFromGUI);
+        }
     }
 }
 
