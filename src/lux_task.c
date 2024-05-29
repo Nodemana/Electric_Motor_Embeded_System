@@ -275,7 +275,7 @@ static void prvReadLightSensor(void *pvParameters)
             }
             else
             {
-                UARTprintf("not success!\n\n");
+                UARTprintf("Lux read unseccusfull\n\n");
             }
         }
     }

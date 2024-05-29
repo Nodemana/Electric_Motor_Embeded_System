@@ -145,7 +145,7 @@ typedef struct
 } DataRange;
 
 DataRange Lux_Data_Range;
-DataRange Temp_Data_Range;
+DataRange Accel_Data_Range;
 DataRange Power_Data_Range;
 DataRange Speed_Data_Range;
 
@@ -153,7 +153,7 @@ uint8_t current_array_size = 0;
 
 /* Initialise Data Arrays for plotting */
 uint32_t lux_data[NUMBER_DATA_POINTS] = {0};
-uint32_t temp_data[NUMBER_DATA_POINTS] = {0};
+uint32_t accel_data[NUMBER_DATA_POINTS] = {0};
 uint32_t power_data[NUMBER_DATA_POINTS] = {0};
 uint32_t speed_data[NUMBER_DATA_POINTS] = {0};
 
@@ -724,7 +724,7 @@ void OnRadioChange(tWidget *psWidget, uint32_t bSelected)
     // }
     // else if (selected_sensor == TEMP)
     // {
-    //     xyPlaneDraw(Temp_Data_Range, false);
+    //     xyPlaneDraw(Accel_Data_Range, false);
     // }
     // else if (selected_sensor == POWER)
     // {
@@ -814,12 +814,12 @@ void update_data_array(uint32_t * data_arr, uint32_t new_data)
 
 void plot_data(uint32_t * data_arr, DataRange data_range)
 {
-    uint32_t y_step_size = (data_range.max - data_range.min) / Y_AXIS_LENGTH;
-    uint32_t x_time_step = (X_AXIS_LENGTH / NUMBER_DATA_POINTS);
-    uint32_t y_data = 0; 
-    uint32_t x_data = 0;
-    uint32_t prev_x_data = 0;
-    uint32_t prev_y_data = 0;
+    float y_step_size = (float)( (data_range.max - data_range.min) / Y_AXIS_LENGTH );
+    float x_time_step = (float)(X_AXIS_LENGTH / NUMBER_DATA_POINTS);
+    float y_data = 0; 
+    float x_data = 0;
+    float prev_x_data = 0;
+    float prev_y_data = 0;
 
     // Check if moving graph window should start
     if (current_array_size <= (NUMBER_DATA_POINTS - 1))
@@ -829,14 +829,14 @@ void plot_data(uint32_t * data_arr, DataRange data_range)
         //UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
         for (int i = 0; i < current_array_size; i++)
         {
-            x_data = X_AXIS_ORIGIN + (x_time_step * i) + 10;
+            x_data = (float)(X_AXIS_ORIGIN + (x_time_step * i) + 10);
             if (data_arr[i] >= data_range.max) 
             {
-                y_data = Y_AXIS_ORIGIN - Y_AXIS_LENGTH;
+                y_data = (float)(Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
             else
             {
-                y_data = Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5;
+                y_data = (float)(Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5);
             }
             GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
@@ -854,14 +854,14 @@ void plot_data(uint32_t * data_arr, DataRange data_range)
         GrContextForegroundSet(&sContext, ClrDarkBlue);
         for (int i = 0; i < NUMBER_DATA_POINTS; i++)
         {
-            x_data = X_AXIS_ORIGIN + (x_time_step * i) + 10;
+            x_data = (float)(X_AXIS_ORIGIN + (x_time_step * i) + 10);
             if (data_arr[i] > data_range.max) 
             {
-                y_data = Y_AXIS_ORIGIN - Y_AXIS_LENGTH;
+                y_data = (float)(Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
             else
             {
-                y_data = Y_AXIS_ORIGIN -  (data_arr[i] / y_step_size) - 1.5;
+                y_data = (float)(Y_AXIS_ORIGIN -  (data_arr[i] / y_step_size) - 1.5);
             }
             GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
@@ -978,7 +978,7 @@ void update_data_arrays(void)
     EventBits_t DisplayBits;
     SensorMsg xReceivedMessage;
     SensorMsg xLuxReceivedMessage;
-    SensorMsg xAccelReceivedMessage;
+    CalcMsg   xAccelReceivedMessage;
     SensorMsg xPowerReceivedMessage;
     SensorMsg xSpeedReceivedMessage;
 
@@ -1007,7 +1007,7 @@ void update_data_arrays(void)
         update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
     }
 
-    /*** TEMP ***/
+    /*** ACCEL ***/
     if ( ( ( DisplayBits & (ACCEL_DATA_READY) ) == (ACCEL_DATA_READY) ) )
     {
         if (xQueueReceive(xAccelSensorQueue,
@@ -1015,13 +1015,15 @@ void update_data_arrays(void)
                     (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
-            // update_data_array(temp_data, xAccelReceivedMessage.SensorReading);
+            update_data_array(accel_data, xAccelReceivedMessage.ClaclulatedData);
+            char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
+            UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), xAccelReceivedMessage.ClaclulatedData);
         }
     }
     else if (current_array_size > 0)
     {
         // Update data array with old data to plot
-        // update_data_array(temp_data, xAccelReceivedMessage.SensorReading);
+        update_data_array(accel_data, xAccelReceivedMessage.ClaclulatedData);
     }
 
     /*** POWER ***/
@@ -1055,7 +1057,7 @@ void update_data_arrays(void)
     else if (current_array_size > 0)
     {
         // Update data array with old data to plot
-        // update_data_array(speed_data, xSpeedReceivedMessage.SensorReading);
+        update_data_array(speed_data, xSpeedReceivedMessage.SensorReading);
     }
 
 }
@@ -1092,8 +1094,8 @@ static void prvPlotTask(void *pvParameters)
     Lux_Data_Range.max = 200;
     Lux_Data_Range.min = 0;
 
-    Temp_Data_Range.max = 50;
-    Temp_Data_Range.min = 0;
+    Accel_Data_Range.max = 3;
+    Accel_Data_Range.min = 0;
 
     Power_Data_Range.max = 100;
     Power_Data_Range.min = 0;
@@ -1123,10 +1125,10 @@ static void prvPlotTask(void *pvParameters)
                     if (state_changed)
                     {
                         clearScreen(ClrWhite);
-                        xyPlaneDraw(Temp_Data_Range, false);
+                        xyPlaneDraw(Accel_Data_Range, false);
                         state_changed = false;
                     }
-                    plot_data(temp_data, Temp_Data_Range);
+                    plot_data(accel_data, Accel_Data_Range);
                     break;
 
                 case POWER:
