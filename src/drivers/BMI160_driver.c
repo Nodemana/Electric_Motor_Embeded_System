@@ -53,22 +53,22 @@ s8 bmi160_i2c_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     // UARTprintf("dev_addr = %d, reg_addr = %d, cnt = %d\n", dev_addr, reg_addr, cnt);
 
     // Set the slave address
-    I2CMasterSlaveAddrSet(I2C0_BASE, dev_addr, false);
+    I2CMasterSlaveAddrSet(I2C2_BASE, dev_addr, false);
 
     // Send the register address to write to
-    I2CMasterDataPut(I2C0_BASE, reg_addr);
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
-    while (I2CMasterBusy(I2C0_BASE));
+    I2CMasterDataPut(I2C2_BASE, reg_addr);
+    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+    while (I2CMasterBusy(I2C2_BASE));
 
     // Write the data
     for (uint8_t i = 0; i < cnt; i++) {
-        I2CMasterDataPut(I2C0_BASE, reg_data[i]);
+        I2CMasterDataPut(I2C2_BASE, reg_data[i]);
         if (i == (cnt - 1)) {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
+            I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
         } else {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
+            I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
         }
-        while (I2CMasterBusy(I2C0_BASE));
+        while (I2CMasterBusy(I2C2_BASE));
     }
 
     return 0; // Success
@@ -85,32 +85,32 @@ s8 bmi160_i2c_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
     // UARTprintf("dev_addr = %d, reg_addr = %d, cnt = %d\n", dev_addr, reg_addr, cnt);
 
     // Load device slave address for writting 
-    I2CMasterSlaveAddrSet(I2C0_BASE, dev_addr, false);
+    I2CMasterSlaveAddrSet(I2C2_BASE, dev_addr, false);
 
     // Place the character to be sent in the data register
-    I2CMasterDataPut(I2C0_BASE, reg_addr);
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
-    while (I2CMasterBusy(I2C0_BASE)) { }
+    I2CMasterDataPut(I2C2_BASE, reg_addr);
+    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    while (I2CMasterBusy(I2C2_BASE)) { }
 
     // Load device slave address for reading
-    I2CMasterSlaveAddrSet(I2C0_BASE, dev_addr, true);
+    I2CMasterSlaveAddrSet(I2C2_BASE, dev_addr, true);
     // UARTprintf("Receiving data: [");
     for (uint8_t i = 0; i < cnt; i++) {
         if (cnt == 1)
         {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
+            I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
         } else if (i == 0)
         {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
+            I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
         } else if (i == (cnt - 1)) 
         {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+            I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
         } else 
         {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
+            I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
         }
-        while (I2CMasterBusy(I2C0_BASE));
-        reg_data[i] = I2CMasterDataGet(I2C0_BASE);
+        while (I2CMasterBusy(I2C2_BASE));
+        reg_data[i] = I2CMasterDataGet(I2C2_BASE);
         // UARTprintf("%d, ", reg_data[i]);
     }
     // UARTprintf("]\n");
@@ -126,25 +126,25 @@ s8 bmi160_i2c_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
 s8 bmi160_i2c_burst_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u32 cnt)
 {
     // Set the slave address and register to read from
-    I2CMasterSlaveAddrSet(I2C0_BASE, dev_addr, false);
-    I2CMasterDataPut(I2C0_BASE, reg_addr);
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
-    while (I2CMasterBusy(I2C0_BASE));
+    I2CMasterSlaveAddrSet(I2C2_BASE, dev_addr, false);
+    I2CMasterDataPut(I2C2_BASE, reg_addr);
+    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    while (I2CMasterBusy(I2C2_BASE));
 
     // Set the slave address for reading
-    I2CMasterSlaveAddrSet(I2C0_BASE, dev_addr, true);
+    I2CMasterSlaveAddrSet(I2C2_BASE, dev_addr, true);
     for (uint32_t i = 0; i < cnt; i++) {
 
         if (i == 0)
         {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
+            I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
         } else if (i == (cnt - 1)) {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+            I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
         } else {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
+            I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
         }
-        while (I2CMasterBusy(I2C0_BASE));
-        reg_data[i] = I2CMasterDataGet(I2C0_BASE);
+        while (I2CMasterBusy(I2C2_BASE));
+        reg_data[i] = I2CMasterDataGet(I2C2_BASE);
         UARTprintf("Burst Receiving: %d", reg_data[i]);
     }
 
