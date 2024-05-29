@@ -140,8 +140,8 @@ uint32_t SpeedThreshold = 10000;
 // Axis data
 typedef struct
 {
-    uint32_t min;           // Minimun value to plot
-    uint32_t max;           // Minimun value to plot
+    float min;           // Minimun value to plot
+    float max;           // Minimun value to plot
 } DataRange;
 
 DataRange Lux_Data_Range;
@@ -152,10 +152,10 @@ DataRange Speed_Data_Range;
 uint8_t current_array_size = 0;
 
 /* Initialise Data Arrays for plotting */
-uint32_t lux_data[NUMBER_DATA_POINTS] = {0};
-uint32_t accel_data[NUMBER_DATA_POINTS] = {0};
-uint32_t power_data[NUMBER_DATA_POINTS] = {0};
-uint32_t speed_data[NUMBER_DATA_POINTS] = {0};
+float lux_data[NUMBER_DATA_POINTS] = {0};
+float accel_data[NUMBER_DATA_POINTS] = {0};
+float power_data[NUMBER_DATA_POINTS] = {0};
+float speed_data[NUMBER_DATA_POINTS] = {0};
 
 bool state_changed = false;
 /* ------------------------------------------------------------------------------------------------
@@ -167,11 +167,11 @@ void init_display( void );
 void define_sensor_axis( void );
 
 void update_data_arrays(void);
-void update_data_arrays(void);
+// void update_data_arrays(void);
 void clearAxis (int backround_colour );
 void clearScreen (int backround_colour );
 
-void plot_data(uint32_t * data_arr, DataRange data_range);
+void plot_data(float * data_arr, DataRange data_range);
 /*
  * Called by main() to do example specific hardware configurations and to
  * create the Process Switch task.
@@ -195,7 +195,7 @@ static void prvPlotTask(void *pvParameters);
 /*
  * Function to update the data array
  */
-void update_data_array(uint32_t * data_arr, uint32_t new_data);
+void update_data_array(float * data_arr, float new_data);
 /*-----------------------------------------------------------*/
 
 /* ------------------------------------------------------------------------------------------------
@@ -745,7 +745,8 @@ void xyPlaneDraw(DataRange data_range, bool grid_on)
 {
     // 
     GrContextForegroundSet(&sContext, ClrDarkBlue); // Set colour to dark blue
-    char cstr[10];
+    // char cstr[10];
+    char output[10];
     // Draw y axix
     GrLineDrawV(&sContext, X_AXIS_ORIGIN, Y_AXIS_ORIGIN, (Y_AXIS_ORIGIN - Y_AXIS_LENGTH));
      // Draw x axis
@@ -756,11 +757,20 @@ void xyPlaneDraw(DataRange data_range, bool grid_on)
     {
         // Plot each interval of y on y-axis
         GrContextFontSet(&sContext, &g_sFontCm16);
-        int y_range = data_range.max - data_range.min;
-        int interval = y_range / (NUMBER_Y_TICKS-1);
-        usprintf(cstr, "%d", i * interval);
-        GrStringDrawCentered(&sContext, cstr, -1,
-                             X_AXIS_ORIGIN - 20, (Y_AXIS_ORIGIN - 0) - (i * (Y_AXIS_LENGTH-0) / (NUMBER_Y_TICKS-1)), 0);
+        float y_range = data_range.max - data_range.min;
+        float interval = y_range / (float)(NUMBER_Y_TICKS-1);
+        if ((int)interval * 2 == 0)
+        {
+            char cstr[10] = "%f";
+            ftoa(cstr, output, 10, i * interval);
+        }
+        else
+        {
+            usprintf(output, "%d", (int)(i * interval));
+        }
+        // usprintf(cstr, "%d", i * interval);
+        GrStringDrawCentered(&sContext, output, -1,
+                             X_AXIS_ORIGIN - 20, (Y_AXIS_ORIGIN - 0) - (i * (Y_AXIS_LENGTH-0) / (NUMBER_Y_TICKS-1)), 0); // set -0 to -1.5 to be exact
         GrLineDrawH(&sContext, X_AXIS_ORIGIN -4, X_AXIS_ORIGIN + 4,  (Y_AXIS_ORIGIN-0) - (i * (Y_AXIS_LENGTH-0) / (NUMBER_Y_TICKS-1)));
     }
 }
@@ -791,7 +801,7 @@ void define_sensor_axis( void )
     
 }
 
-void update_data_array(uint32_t * data_arr, uint32_t new_data)
+void update_data_array(float * data_arr, float new_data)
 {
     if (current_array_size <= (NUMBER_DATA_POINTS - 1))
     {
@@ -812,10 +822,10 @@ void update_data_array(uint32_t * data_arr, uint32_t new_data)
     //UARTprintf("\n");
 }
 
-void plot_data(uint32_t * data_arr, DataRange data_range)
+void plot_data(float * data_arr, DataRange data_range)
 {
-    float y_step_size = (float)( (data_range.max - data_range.min) / Y_AXIS_LENGTH );
-    float x_time_step = (float)(X_AXIS_LENGTH / NUMBER_DATA_POINTS);
+    float y_step_size = ( (data_range.max - data_range.min) / Y_AXIS_LENGTH );
+    float x_time_step = X_AXIS_LENGTH / NUMBER_DATA_POINTS;
     float y_data = 0; 
     float x_data = 0;
     float prev_x_data = 0;
@@ -829,14 +839,14 @@ void plot_data(uint32_t * data_arr, DataRange data_range)
         //UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
         for (int i = 0; i < current_array_size; i++)
         {
-            x_data = (float)(X_AXIS_ORIGIN + (x_time_step * i) + 10);
+            x_data = (X_AXIS_ORIGIN + (x_time_step * i) + 10);
             if (data_arr[i] >= data_range.max) 
             {
-                y_data = (float)(Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
+                y_data = (Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
             else
             {
-                y_data = (float)(Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5);
+                y_data = (Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5);
             }
             GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
@@ -854,14 +864,14 @@ void plot_data(uint32_t * data_arr, DataRange data_range)
         GrContextForegroundSet(&sContext, ClrDarkBlue);
         for (int i = 0; i < NUMBER_DATA_POINTS; i++)
         {
-            x_data = (float)(X_AXIS_ORIGIN + (x_time_step * i) + 10);
+            x_data = (X_AXIS_ORIGIN + (x_time_step * i) + 10);
             if (data_arr[i] > data_range.max) 
             {
-                y_data = (float)(Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
+                y_data = (Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
             else
             {
-                y_data = (float)(Y_AXIS_ORIGIN -  (data_arr[i] / y_step_size) - 1.5);
+                y_data = (Y_AXIS_ORIGIN -  (data_arr[i] / y_step_size) - 1.5);
             }
             GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
@@ -998,13 +1008,13 @@ void update_data_arrays(void)
                     (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
-            update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
+            update_data_array(lux_data, (float)xLuxReceivedMessage.SensorReading);
         }
     }
     else if (current_array_size > 0)
     {
         // Update data array with old data to plot
-        update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
+        update_data_array(lux_data, (float)xLuxReceivedMessage.SensorReading);
     }
 
     /*** ACCEL ***/
@@ -1051,13 +1061,13 @@ void update_data_arrays(void)
                     (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
-            update_data_array(speed_data, xSpeedReceivedMessage.SensorReading);
+            update_data_array(speed_data, (float)xSpeedReceivedMessage.SensorReading);
         }
     }
     else if (current_array_size > 0)
     {
         // Update data array with old data to plot
-        update_data_array(speed_data, xSpeedReceivedMessage.SensorReading);
+        update_data_array(speed_data, (float)xSpeedReceivedMessage.SensorReading);
     }
 
 }
@@ -1094,7 +1104,7 @@ static void prvPlotTask(void *pvParameters)
     Lux_Data_Range.max = 200;
     Lux_Data_Range.min = 0;
 
-    Accel_Data_Range.max = 3;
+    Accel_Data_Range.max = 2;
     Accel_Data_Range.min = 0;
 
     Power_Data_Range.max = 100;
