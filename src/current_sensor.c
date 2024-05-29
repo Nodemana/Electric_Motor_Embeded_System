@@ -344,7 +344,7 @@ void ADC1_SEQ2_ISR(void)
     portYIELD_FROM_ISR( &xVoltageSensorTaskWoken );  
 }
 
-void xTimer3AIntHandler(void)
+void xTimer3AIntHandler_CurrentADC(void)
 {
     ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_1);
     ADCProcessorTrigger(ADC1_BASE, ADC_SEQ_2);

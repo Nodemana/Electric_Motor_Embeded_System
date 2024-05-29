@@ -238,7 +238,7 @@ static void prvConfigureTimers(void)
     /* Configure Timer 2 in full-width periodic mode. */
     TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC);
 
-    /* Set the Timer 2A load value to run at 10 Hz. */
+    /* Set the Timer 2A load value to run at 80 Hz. */
     TimerLoadSet(TIMER2_BASE, TIMER_A, g_ui32SysClock / 8);
 
     /* Configure the Timer 2A interrupt for timeout. */
@@ -250,8 +250,8 @@ static void prvConfigureTimers(void)
      /* Enable Timer 2A. */
     TimerEnable(TIMER2_BASE, TIMER_A);
 
-    /* Set the Timer 2B load value to run at 10 Hz. */
-    TimerLoadSet(TIMER2_BASE, TIMER_B, g_ui32SysClock / 8);
+    /* Set the Timer 2B load value to run at 100 Hz. */
+    TimerLoadSet(TIMER2_BASE, TIMER_B, g_ui32SysClock / 10); // CONVERT TO DEFINE
 
     /* Configure the Timer 2B interrupt for timeout. */
     TimerIntEnable(TIMER2_BASE, TIMER_TIMB_TIMEOUT);

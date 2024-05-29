@@ -83,7 +83,7 @@
  */
 
 #define FILTER_SIZE 10
-#define TIMER_TICKS_PER_SEC 8
+#define TIMER_TICKS_PER_SEC 10
 #define speedQUEUE_LENGTH (10)
 
 struct Message
@@ -249,13 +249,12 @@ static void prvMotorControllerTask(void *pvParameters)
             if (xSemaphoreTake(xSharedSpeedWithController, portMAX_DELAY) == pdPASS) {
                     // Receive
                     current_speed_RPM = revolutions_per_minute_shared;
-                    // UARTprintf("Speed: %d\n", current_speed_RPM);
-                    // UARTprintf("State: %d\n", motor_control_state);
+                    UARTprintf("Speed: %d\n", current_speed_RPM);
+                    UARTprintf("State: %d\n", motor_control_state);
                     //acceleration_RPM_per_second = acceleration_RPM_per_second_shared;
                     xSemaphoreGive(xSharedSpeedWithController);
             }
-            if(current_speed_RPM != NULL) { 
-                if (xSemaphoreTake(xSharedDutyWithMotor, portMAX_DELAY) == pdPASS) {
+            if (xSemaphoreTake(xSharedDutyWithMotor, portMAX_DELAY) == pdPASS) {
                 if(motor_control_state == E_STOPPING){
                     next_duty_shared = RPM_to_Duty_Equation(ESTOP_Controller(current_speed_RPM));
                 } else if(motor_control_state == RUNNING) {
@@ -268,8 +267,8 @@ static void prvMotorControllerTask(void *pvParameters)
                 } 
                 UARTprintf("Next Duty: %d\n", next_duty_shared);
                 xSemaphoreGive(xSharedDutyWithMotor);
-                }
             }
+
             
             // UARTprintf("Desired RPM: %d\n", desired_speed_RPM);
             // UARTprintf("RPM: %d\n", current_speed_RPM);
@@ -286,7 +285,7 @@ static void prvMotorTask(void *pvParameters)
     uint16_t period_value = 100;
     //uint16_t desired_duty = 100;
 
-    int32_t desired_speed_RPM = 9000;
+    int32_t desired_speed_RPM = 11000;
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
@@ -603,7 +602,7 @@ int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_erro
 }
 
 int32_t ESTOP_Controller(int32_t current_speed) {
-    int32_t acceleration = -1000;
+    int32_t acceleration = -2000;
     return (int32_t)round(current_speed + acceleration); 
 }
 
@@ -645,8 +644,22 @@ void xTimer2AIntHandler_SpeedTimerISR(void)
     // Perform a context switch if needed.
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     // Clear the timer interrupt.
-    //  /* Clear the hardware interrupt flag for Timer 0A. */
+    //  /* Clear the hardware interrupt flag for Timer 2A. */
     TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
+}
+
+/*
+ Timer 3B ISR
+*/
+void xTimer3BIntHandler_ESTOPController(void)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    xSemaphoreGiveFromISR(xSpeedSemaphore, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+
+
+    TimerIntClear(TIMER3_BASE, TIMER_TIMB_TIMEOUT);
 }
 
 /*

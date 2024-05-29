@@ -218,14 +218,14 @@ void vDISPTask(void)
                 "DISP",
                 configMINIMAL_STACK_SIZE,
                 NULL,
-                tskIDLE_PRIORITY + 2,
+                tskIDLE_PRIORITY + 1,
                 NULL);
 
     xTaskCreate(prvPlotTask,
                 "PLOT",
                 configMINIMAL_STACK_SIZE,
                 NULL,
-                tskIDLE_PRIORITY + 3,
+                tskIDLE_PRIORITY + 2,
                 NULL);
 
     /* Set up the software timer */
@@ -805,11 +805,11 @@ void update_data_array(uint32_t * data_arr, uint32_t new_data)
         }
         data_arr[NUMBER_DATA_POINTS - 1] = new_data; // Append new value at the end
     }
-    UARTprintf("Updated array:\n");
+    //UARTprintf("Updated array:\n");
     for (int i = 0; i < NUMBER_DATA_POINTS; i++) {
-        UARTprintf("%d ", data_arr[i]);
+        //UARTprintf("%d ", data_arr[i]);
     }
-    UARTprintf("\n");
+    //UARTprintf("\n");
 }
 
 void plot_data(uint32_t * data_arr, DataRange data_range)
@@ -826,7 +826,7 @@ void plot_data(uint32_t * data_arr, DataRange data_range)
     {
         clearAxis(ClrWhite);
         GrContextForegroundSet(&sContext, ClrDarkBlue);
-        UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
+        //UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
         for (int i = 0; i < current_array_size; i++)
         {
             x_data = X_AXIS_ORIGIN + (x_time_step * i) + 15;
