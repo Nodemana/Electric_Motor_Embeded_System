@@ -249,8 +249,8 @@ static void prvMotorControllerTask(void *pvParameters)
             if (xSemaphoreTake(xSharedSpeedWithController, portMAX_DELAY) == pdPASS) {
                     // Receive
                     current_speed_RPM = revolutions_per_minute_shared;
-                    UARTprintf("Speed: %d\n", current_speed_RPM);
-                    UARTprintf("State: %d\n", motor_control_state);
+                    // UARTprintf("Speed: %d\n", current_speed_RPM);
+                    // UARTprintf("State: %d\n", motor_control_state);
                     //acceleration_RPM_per_second = acceleration_RPM_per_second_shared;
                     xSemaphoreGive(xSharedSpeedWithController);
             }
@@ -265,7 +265,7 @@ static void prvMotorControllerTask(void *pvParameters)
                     next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
                     //UARTprintf("Next Duty: %d\n", next_duty_shared);
                 } 
-                UARTprintf("Next Duty: %d\n", next_duty_shared);
+                // UARTprintf("Next Duty: %d\n", next_duty_shared);
                 xSemaphoreGive(xSharedDutyWithMotor);
             }
 
@@ -472,8 +472,8 @@ static void prvSpeedSenseTask(void *pvParameters)
             // UARTprintf("Hall States: %d\n", hall_state_counter);
             // UARTprintf("RPS: %d\n", revolutions_per_second);
             // UARTprintf("RPM: %d\n", revolutions_per_minute);
-            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            // UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 

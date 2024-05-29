@@ -142,7 +142,7 @@ void vLUXTask(void)
                 "LUX",                      // The text name for the Task 
                 configMINIMAL_STACK_SIZE,   // The size of the stack to allocate to the task.
                 NULL,                       // The parameter(s) passed to the task
-                tskIDLE_PRIORITY + 2,       // The priority assigned to the task.
+                tskIDLE_PRIORITY + 1,       // The priority assigned to the task.
                 NULL);                      // Task handler
 
     /* Set up the software timer */
