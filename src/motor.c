@@ -143,15 +143,10 @@ int32_t Hall_C;
 
 volatile uint32_t hall_state_counter = 0;
 
-// uint32_t revolutions_per_second;
-// uint32_t revolutions_per_minute;
-// uint32_t acceleration_RPM_per_second = 0;
-
 int32_t revolutions_per_minute_shared;
 int32_t acceleration_RPM_per_second_shared;
 int32_t desired_speed_RPM_shared;
 uint32_t next_duty_shared;
-double time_step_shared;
 int32_t integral_error = 0;
 
 /*
