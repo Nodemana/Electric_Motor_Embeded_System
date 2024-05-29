@@ -368,8 +368,7 @@ tSliderWidget g_psSliders[] =
 #define SLIDER_CANVAS_VAL_INDEX 6
 #define POWER_INDEX 0
 #define ACCEL_INDEX 1
-#define LIGHT_INDEX 2
-#define SPEED_INDEX 3
+#define SPEED_INDEX 2
 
 #define NUM_SLIDERS (sizeof(g_psSliders) / sizeof(g_psSliders[0]))
 
@@ -708,7 +707,7 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         WidgetPaint((tWidget *)&g_psSliders[SLIDER_LOCKED_INDEX]);
     }
 
-    if (psWidget == (tWidget *)&g_psSliders[0])
+    if (psWidget == (tWidget *)&g_psSliders[POWER_INDEX])
     {
         UARTprintf("Power threshold = :%d", i32Value);
         //
@@ -716,11 +715,11 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         //
         Power_Threshold = i32Value;
         usprintf(pcSliderText, "%3d W", i32Value);
-        SliderTextSet(&g_psSliders[0], pcSliderText);
-        WidgetPaint((tWidget *)&g_psSliders[0]);
+        SliderTextSet(&g_psSliders[POWER_INDEX], pcSliderText);
+        WidgetPaint((tWidget *)&g_psSliders[POWER_INDEX]);
     }
 
-    if (psWidget == (tWidget *)&g_psSliders[1])
+    if (psWidget == (tWidget *)&g_psSliders[ACCEL_INDEX])
     {
         UARTprintf("Acceleration threshold = :%d", i32Value);
         //
@@ -728,11 +727,11 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         //
         Acceleration_Threshold = i32Value;
         usprintf(pcSliderText, "%3d%%", i32Value);
-        SliderTextSet(&g_psSliders[1], pcSliderText);
-        WidgetPaint((tWidget *)&g_psSliders[1]);
+        SliderTextSet(&g_psSliders[ACCEL_INDEX], pcSliderText);
+        WidgetPaint((tWidget *)&g_psSliders[ACCEL_INDEX]);
     }
 
-    if (psWidget == (tWidget *)&g_psSliders[3])
+    if (psWidget == (tWidget *)&g_psSliders[SPEED_INDEX])
     {
         UARTprintf("Speed threshold = :%d", i32Value);
         //
@@ -741,8 +740,8 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         Set_Speed = i32Value;
         // usprintf(pcSliderText, "%3d%%", i32Value);
         usprintf(pcSliderText, "%d RPM", i32Value * SET_SPEED_SCALER);
-        SliderTextSet(&g_psSliders[3], pcSliderText);
-        WidgetPaint((tWidget *)&g_psSliders[3]);
+        SliderTextSet(&g_psSliders[SPEED_INDEX], pcSliderText);
+        WidgetPaint((tWidget *)&g_psSliders[SPEED_INDEX]);
     }
 }
 
