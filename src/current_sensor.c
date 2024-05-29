@@ -90,6 +90,14 @@
 // Define moving average window size
 #define WINDOW_SIZE 20   // Window size of moving average
 
+enum states
+{
+    IDLE,
+    STARTING,
+    RUNNING,
+    E_STOPPING,
+};
+
 
 /*-----------------------------------------------------------*/
 
@@ -105,13 +113,14 @@ extern SemaphoreHandle_t xESTOPSemaphore;
 // Mutexes
 extern SemaphoreHandle_t xSharedPowerThresholdFromGUI;
 
-extern double Shared_Power_Threshold;
+extern uint32_t Shared_Power_Threshold;
+extern motor_control_state;
 
 /* ------------------------------------------------------------------------------------------------
  *                                     Local Global Variables
  * -------------------------------------------------------------------------------------------------
  */
-double Power_Threshold;
+uint32_t Threshold = 50;
 
 // Declare array to store sampled data for moving average
 float sampleWindow[WINDOW_SIZE];
@@ -241,15 +250,20 @@ static void prvCurrentSensorTask( void *pvParameters) {
         // UartPrintFloat(power_msg, sizeof(power_msg), power);
 
         if(xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS) {
-            Power_Threshold = Shared_Power_Threshold;
-            //UARTprintf("desired_speed_RPM: %d\n", desired_speed_RPM);
+            Threshold = Shared_Power_Threshold;
+                // char power_msg[18] = "\n Total power: %f\n";
+                // UartPrintFloat(power_msg, sizeof(power_msg), Threshold);
 
             xSemaphoreGive(xSharedPowerThresholdFromGUI);
         }
-
-        if(power > Power_Threshold){
-            xSemaphoreGive(xESTOPSemaphore);
+        if(motor_control_state == RUNNING){
+            if(power > Threshold){
+                char power_msg[18] = "\n Total power: %f\n";
+                UartPrintFloat(power_msg, sizeof(power_msg), power);
+                xSemaphoreGive(xESTOPSemaphore);
+            }
         }
+
 
 
         // char power_msg[18] = "\n Total power: %f\n";

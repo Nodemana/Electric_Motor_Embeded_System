@@ -283,8 +283,8 @@ static void prvMotorControllerTask(void *pvParameters)
                 {
                     // Recieve
                     desired_speed_RPM = desired_speed_RPM_shared;
-                    UARTprintf("Desired Speed: %d\n", desired_speed_RPM);
-                    UARTprintf("Speed: %d\n", current_speed_RPM);
+                    // UARTprintf("Desired Speed: %d\n", desired_speed_RPM);
+                    // UARTprintf("Speed: %d\n", current_speed_RPM);
                     // Send
                     next_duty_shared = RPM_to_Duty_Equation(PID(desired_speed_RPM, current_speed_RPM, &integral_error));
                     // UARTprintf("Next Duty: %d\n", next_duty_shared);
