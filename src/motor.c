@@ -271,6 +271,7 @@ static void prvMotorTask(void *pvParameters)
             if (g_pui32ButtonPressed == USR_SW1)
             {
                 motor_control_state = STARTING;
+                desired_speed_RPM = 1400;
                 LEDWrite(LED_D1, LED_D1);
                 g_pui32ButtonPressed = 0;
             }
@@ -326,7 +327,7 @@ static void prvMotorTask(void *pvParameters)
                 }
             }
 
-UARTprintf("Seen");
+// UARTprintf("Seen");
             // This should trigger the motor to decelerate until the speed is 0, once speed has reached zero, then set the control state to IDLE
             if (g_pui32ButtonPressed == USR_SW2)
             {
@@ -466,8 +467,8 @@ static void prvSpeedSenseTask(void *pvParameters)
             // UARTprintf("Hall States: %d\n", hall_state_counter);
             // UARTprintf("RPS: %d\n", revolutions_per_second);
             // UARTprintf("RPM: %d\n", revolutions_per_minute);
-            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            // UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 
@@ -604,7 +605,7 @@ int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_erro
 
 int32_t ESTOP_Controller(int32_t current_speed, double elapsed_time)
 {
-    int32_t change_in_speed = DECELERATION_RATE * elapsed_time;
+    int32_t change_in_speed = DECELERATION_RATE; //* elapsed_time;
     return (int32_t)round(current_speed + change_in_speed);
 }
 

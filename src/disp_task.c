@@ -1111,7 +1111,7 @@ void update_data_arrays(void)
                           (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
-            // update_data_array(power_data, xPowerReceivedMessage.SensorReading);
+            update_data_array(power_data, xPowerReceivedMessage.SensorReading);
         }
     }
     else if (current_array_size > 0)
@@ -1187,7 +1187,7 @@ static void prvPlotTask(void *pvParameters)
     Temp_Data_Range.max = 50;
     Temp_Data_Range.min = 0;
 
-    Power_Data_Range.max = 100;
+    Power_Data_Range.max = 40;
     Power_Data_Range.min = 0;
 
     Speed_Data_Range.max = 12000;

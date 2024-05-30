@@ -120,7 +120,7 @@ extern motor_control_state;
  *                                     Local Global Variables
  * -------------------------------------------------------------------------------------------------
  */
-uint32_t Threshold = 50;
+uint32_t Threshold = 5000;
 
 // Declare array to store sampled data for moving average
 float sampleWindow[WINDOW_SIZE];
@@ -168,6 +168,7 @@ void xTimer3AIntHandler(void);
 void vCreateCurrentSensorTask( void )
 {
     // Config
+    // UARTprintf("Test point 1");
     ConfigADCInputs();
 
     /* Create the task as described in the comments at the top of this file.
@@ -207,6 +208,7 @@ static void prvCurrentSensorTask( void *pvParameters) {
 
     for (;;) {
         // Step 2: Read ADCs.
+        // UARTprintf("Hello");
         if( xSemaphoreTake(xADCSemaphore, portMAX_DELAY) == pdPASS) {
             num_samples = ADCSequenceDataGet(ADC1_BASE, ADC_SEQ_1, &ui32Value); // Read the value from the ADC.
             phase_B_raw = ui32Value;
@@ -217,6 +219,7 @@ static void prvCurrentSensorTask( void *pvParameters) {
             phase_C_raw = ui32Value;
         }
 
+        if(motor_control_state == RUNNING){
         // Step 3: Phase A voltage. Assuming the processor processes ADC faster than the motor can do 1/12th of a revolution.
         // voltage in a 3 phase system always cnacles out, A + B + C = 0; so A = -(B + C).
         // Since our range goes between 0 andd 4096 and a regular sinewave goes between -1 and 1 we must account for this offset
@@ -231,22 +234,29 @@ static void prvCurrentSensorTask( void *pvParameters) {
         {
             float voltage = MapVoltage(raw_Vs[i]);
             currents[i] = CalculateCurrent(voltage);
-
-            // char voltage_msg[14] = "\t Voltage: %f";
-            // char current_msg[14] = "\t Current: %f";
-            // UARTprintf("\nPhase %c: ", phase_letters[i]);
-            // UARTprintf("\t raw: %d", raw_Vs[i]);
-            // UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-            // UARTprintf("\t Current: %d", (int32_t)(currents[i] * 100));
+            char voltage_msg[14] = "\t Voltage: %f";
+            char current_msg[14] = "\t Current: %f";
+            UARTprintf("\nPhase %c: ", phase_letters[i]);
+            UARTprintf("\t raw: %d", raw_Vs[i]);
+            UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
+            UARTprintf("\t Current: %d", (int32_t)(currents[i] * 100));
         }
 
         float total_cur =  fabsf(currents[1]) + fabsf(currents[2]) * 3/2;//+ fabsf(currents[0]);
-        float avgCurrent = rollingAverage(total_cur);
+        // float avgCurrent = rollingAverage(total_cur);
         // char current_msg[14] = "\n Current: %f";
         // UartPrintFloat(current_msg, sizeof(current_msg), total_cur);
-        float power = CalculatePower(avgCurrent);
-        // char power_msg[18] = "\n Total power: %f\n";
-        // UartPrintFloat(power_msg, sizeof(power_msg), power);
+        float avg_power;
+        float power = CalculatePower(total_cur);
+        if(total_cur < 10) {
+            avg_power = rollingAverage(power);
+        }
+        else {
+            avg_power = rollingAverage(0);
+        }
+
+        // char power_msg[18] = "\n Total power: %f";
+        // UartPrintFloat(power_msg, sizeof(power_msg), avg_power);
 
         if(xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS) {
             Threshold = Shared_Power_Threshold;
@@ -255,20 +265,32 @@ static void prvCurrentSensorTask( void *pvParameters) {
 
             xSemaphoreGive(xSharedPowerThresholdFromGUI);
         }
-        if(motor_control_state == RUNNING){
-            if(power > Threshold){
-                char power_msg[18] = "\n Total power: %f\n";
-                UartPrintFloat(power_msg, sizeof(power_msg), power);
-                xSemaphoreGive(xESTOPSemaphore);
-            }
+
+        if(avg_power > Threshold){
+            char power_msg[14] = "\n ESTOP: %f\n";
+            UartPrintFloat(power_msg, sizeof(power_msg), power);
+            char currents_msg[14] = "\n Current: %f";
+            UartPrintFloat(currents_msg, sizeof(currents_msg), total_cur);
+
+            char voltage_msg[14] = "\t Voltage: %f";
+            // char current_msg[14] = "\t Current: %f";
+            UARTprintf("\nPhase B: ");
+            UARTprintf("\t raw: %d", raw_Vs[1]);
+            UartPrintFloat(voltage_msg, sizeof(voltage_msg), MapVoltage(raw_Vs[1]));
+            UARTprintf("\t Current: %d", (int32_t)(currents[1] * 100));
+
+            UARTprintf("\nPhase C: ");
+            UARTprintf("\t raw: %d", raw_Vs[2]);
+            UartPrintFloat(voltage_msg, sizeof(voltage_msg), MapVoltage(raw_Vs[2]));
+            UARTprintf("\t Current: %d", (int32_t)(currents[2] * 100));
+
+            xSemaphoreGive(xESTOPSemaphore);
         }
-
-
 
         // char power_msg[18] = "\n Total power: %f\n";
         // UartPrintFloat(power_msg, sizeof(power_msg), avgPower);
 
-        msg.CalculatedData = power;
+        msg.CalculatedData = avg_power;
         msg.TimeStamp = xTaskGetTickCount();
 
         // Step 5: Add estimate to averaging list.
