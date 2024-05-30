@@ -275,7 +275,11 @@ static void prvReadLightSensor(void *pvParameters)
             }
             else
             {
+<<<<<<< HEAD
                 UARTprintf("not success!\n\n");
+=======
+                UARTprintf("Lux read unseccusfull\n\n");
+>>>>>>> origin/bmi_sensor
             }
         }
     }

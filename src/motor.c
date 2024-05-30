@@ -218,10 +218,15 @@ void vCreateMotorTask(void)
 
 static void prvESTOPTask(void *pvParameters)
 {
+<<<<<<< HEAD
     for (;;)
     {
         if (xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS)
         {
+=======
+    for(;;) {
+        if(xSemaphoreTake(xESTOPSemaphore, portMAX_DELAY) == pdPASS){
+>>>>>>> origin/bmi_sensor
             ESTOP_Tick_Count_Prev = xTaskGetTickCount();
             motor_control_state = E_STOPPING;
         }
@@ -237,15 +242,30 @@ static void prvMotorTask(void *pvParameters)
     int32_t current_speed_RPM;
     int32_t desired_speed_RPM = 1500;
     int32_t integral_error = 0;
+<<<<<<< HEAD
 
     bool stopping_flag = false;
+=======
+>>>>>>> origin/bmi_sensor
     TickType_t ESTOP_Tick_Count_Now;
     TickType_t ESTOP_Tick_Count;
 
     double ESTOPTimeSinceLastTaskRun;
+<<<<<<< HEAD
 
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
+=======
+
+
+
+    bool stopping_flag = false;
+
+    /* Initialise the motors and set the duty cycle (speed) in microseconds */
+    initMotorLib(period_value);
+    /* Set at >10% to get it to start */
+    // setDuty(duty_value);
+>>>>>>> origin/bmi_sensor
 
     for (;;)
     {
@@ -271,7 +291,10 @@ static void prvMotorTask(void *pvParameters)
             if (g_pui32ButtonPressed == USR_SW1)
             {
                 motor_control_state = STARTING;
+<<<<<<< HEAD
                 desired_speed_RPM = 1400;
+=======
+>>>>>>> origin/bmi_sensor
                 LEDWrite(LED_D1, LED_D1);
                 g_pui32ButtonPressed = 0;
             }
@@ -327,7 +350,11 @@ static void prvMotorTask(void *pvParameters)
                 }
             }
 
+<<<<<<< HEAD
 // UARTprintf("Seen");
+=======
+UARTprintf("Seen");
+>>>>>>> origin/bmi_sensor
             // This should trigger the motor to decelerate until the speed is 0, once speed has reached zero, then set the control state to IDLE
             if (g_pui32ButtonPressed == USR_SW2)
             {
@@ -339,6 +366,7 @@ static void prvMotorTask(void *pvParameters)
 
             break;
         case E_STOPPING:
+<<<<<<< HEAD
             if (xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS)
             {
 
@@ -350,15 +378,34 @@ static void prvMotorTask(void *pvParameters)
                 next_duty_shared = RPM_to_Duty_Equation(ESTOP_Controller(current_speed_RPM, ESTOPTimeSinceLastTaskRun));
                 if (next_duty_shared < 15)
                 {
+=======
+            if(xSemaphoreTake(xControllerSemaphore, portMAX_DELAY) == pdPASS){
+                
+                ESTOP_Tick_Count_Now = xTaskGetTickCount();
+                ESTOP_Tick_Count = ESTOP_Tick_Count_Now - ESTOP_Tick_Count_Prev;
+
+
+                ESTOPTimeSinceLastTaskRun = (double)ESTOP_Tick_Count_Now / configTICK_RATE_HZ;
+
+                
+                next_duty_shared = RPM_to_Duty_Equation(ESTOP_Controller(current_speed_RPM, ESTOPTimeSinceLastTaskRun));
+                if(next_duty_shared < 15){
+>>>>>>> origin/bmi_sensor
                     next_duty_shared = 0;
                     setDuty(next_duty_shared);
                     disableMotor();
                     motor_control_state = IDLE;
+<<<<<<< HEAD
                 }
                 else
                 {
                     setDuty(next_duty_shared);
                 }
+=======
+                } else {
+                    setDuty(next_duty_shared);
+                }
+>>>>>>> origin/bmi_sensor
                 ESTOP_Tick_Count_Prev = ESTOP_Tick_Count_Now;
             }
             desired_speed_RPM = 0;
@@ -467,8 +514,8 @@ static void prvSpeedSenseTask(void *pvParameters)
             // UARTprintf("Hall States: %d\n", hall_state_counter);
             // UARTprintf("RPS: %d\n", revolutions_per_second);
             // UARTprintf("RPM: %d\n", revolutions_per_minute);
-            // UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 
@@ -603,10 +650,16 @@ int32_t PID(int32_t desired_speed, int32_t current_speed, int32_t *integral_erro
     return (int32_t)round(current_speed + total_error * Kp + (*integral_error_ptr * Ki)); // + (*integral_error_ptr * Ki)
 }
 
+<<<<<<< HEAD
 int32_t ESTOP_Controller(int32_t current_speed, double elapsed_time)
 {
     int32_t change_in_speed = DECELERATION_RATE; //* elapsed_time;
     return (int32_t)round(current_speed + change_in_speed);
+=======
+int32_t ESTOP_Controller(int32_t current_speed, double elapsed_time) {
+    int32_t change_in_speed = DECELERATION_RATE * elapsed_time;
+    return (int32_t)round(current_speed + change_in_speed); 
+>>>>>>> origin/bmi_sensor
 }
 
 /*-----------------------------------------------------------*/
