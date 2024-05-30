@@ -69,14 +69,23 @@ uint32_t g_ui32SysClock;
 // Semaphores
 SemaphoreHandle_t xADCSemaphore = NULL;
 SemaphoreHandle_t xSpeedSemaphore = NULL;
-SemaphoreHandle_t xSharedSpeedWithController = NULL;
-SemaphoreHandle_t xSharedSpeedESTOPThreshold = NULL;
 SemaphoreHandle_t xESTOPSemaphore = NULL;
 SemaphoreHandle_t xControllerSemaphore = NULL;
+
+
+// Mutexes
+SemaphoreHandle_t xSharedSpeedWithController = NULL;
+SemaphoreHandle_t xSharedSpeedESTOPThreshold = NULL;
 SemaphoreHandle_t xSharedDutyWithMotor = NULL;
+SemaphoreHandle_t xSharedSetSpeedFromGUI = NULL;
+SemaphoreHandle_t xSharedPowerThresholdFromGUI = NULL;
+SemaphoreHandle_t xSharedAccelerationThresholdFromGUI = NULL;
+
 
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
+SemaphoreHandle_t xPlotTimerSemaphore = NULL;
+SemaphoreHandle_t xAccelTimerSemaphore = NULL;
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
@@ -92,6 +101,10 @@ static void prvSetupHardware(void);
 /* This function sets up UART0 to be used for a console to display information
  * as the example is running. */
 static void prvConfigureUART(void);
+
+
+/* Set up buttons. */
+static void prvConfigureButton( void );
 
 /* Set up the I2C2 for temp and lux sensor. */
 static void prvConfigureI2C2(void);
@@ -112,6 +125,9 @@ extern void vDISPTask(void);
 
 /* API to trigger the LUX task. */
 extern void vLUXTask(void);
+
+/* API to trigger the LUX task. */
+extern void vACCELTask(void);
 
 /* API to trigger the que task */
 extern void vQueueTask(void);
@@ -134,12 +150,19 @@ int main(void)
     xADCSemaphore = xSemaphoreCreateBinary();
     xSpeedSemaphore = xSemaphoreCreateBinary();
     xTimerSemaphore = xSemaphoreCreateBinary();
+    xAccelTimerSemaphore = xSemaphoreCreateBinary();
     xESTOPSemaphore = xSemaphoreCreateBinary();
     xControllerSemaphore = xSemaphoreCreateBinary();
+    xPlotTimerSemaphore = xSemaphoreCreateBinary();
 
+    // Mutex Initialisation
     xSharedSpeedWithController = xSemaphoreCreateMutex();
     xSharedSpeedESTOPThreshold = xSemaphoreCreateMutex();
     xSharedDutyWithMotor = xSemaphoreCreateMutex();
+    xSharedSetSpeedFromGUI = xSemaphoreCreateMutex();
+    xSharedPowerThresholdFromGUI = xSemaphoreCreateMutex();
+    xSharedAccelerationThresholdFromGUI = xSemaphoreCreateMutex();
+
 
 
      if ((xADCSemaphore != NULL) && 
@@ -149,11 +172,16 @@ int main(void)
         (xSharedSpeedESTOPThreshold != NULL) && 
         (xESTOPSemaphore != NULL) &&
         (xControllerSemaphore != NULL) &&
-        (xSharedDutyWithMotor != NULL)
+        (xSharedDutyWithMotor != NULL) &&
+        (xPlotTimerSemaphore != NULL) &&
+        (xSharedSetSpeedFromGUI != NULL) &&
+        (xSharedPowerThresholdFromGUI != NULL) &&
+        (xSharedAccelerationThresholdFromGUI != NULL)
         )
     {
         vDISPTask();
         vLUXTask();
+        vACCELTask();
         vQueueTask();
         vCreateMotorTask();
         vCreateCurrentSensorTask();
@@ -235,7 +263,7 @@ static void prvConfigureTimers(void)
     /* Configure Timer 2 in full-width periodic mode. */
     TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC);
 
-    /* Set the Timer 2A load value to run at 10 Hz. */
+    /* Set the Timer 2A load value to run at 80 Hz. */
     TimerLoadSet(TIMER2_BASE, TIMER_A, g_ui32SysClock / 8);
 
     /* Configure the Timer 2A interrupt for timeout. */
@@ -247,8 +275,8 @@ static void prvConfigureTimers(void)
      /* Enable Timer 2A. */
     TimerEnable(TIMER2_BASE, TIMER_A);
 
-    /* Set the Timer 2B load value to run at 10 Hz. */
-    TimerLoadSet(TIMER2_BASE, TIMER_B, g_ui32SysClock / 8);
+    /* Set the Timer 2B load value to run at 100 Hz. */
+    TimerLoadSet(TIMER2_BASE, TIMER_B, g_ui32SysClock / 10); // CONVERT TO DEFINE
 
     /* Configure the Timer 2B interrupt for timeout. */
     TimerIntEnable(TIMER2_BASE, TIMER_TIMB_TIMEOUT);
@@ -274,10 +302,47 @@ static void prvConfigureTimers(void)
     /* Enable the Timer 3A interrupt in the NVIC. */
     IntEnable(INT_TIMER3A);
 
+    // NOT INITIALLY ENABLED, ENABLED IN ESTOP TASK
+    /* Set the Timer 3B load value to run at 100 Hz. */
+    TimerLoadSet(TIMER3_BASE, TIMER_B, g_ui32SysClock / 100);
+
+    /* Configure the Timer 3A interrupt for timeout. */
+    TimerIntEnable(TIMER3_BASE, TIMER_TIMB_TIMEOUT);
+
+    
+
     /* Enable Timer 3A. */
     // TimerEnable(TIMER3_BASE, TIMER_A);
 
     // /* Enable global interrupts in the NVIC. */
+    IntMasterEnable();
+}
+
+/*-----------------------------------------------------------*/
+
+static void prvConfigureLED( void )
+{
+    /* Initialize LED 2 */
+    LEDWrite(LED_D2, LED_D2);
+}
+
+/*-----------------------------------------------------------*/
+
+static void prvConfigureButton( void )
+{
+    /* Initialize the LaunchPad Buttons. */
+    ButtonsInit();
+
+    /* Configure both switches to trigger an interrupt on a falling edge. */
+    GPIOIntTypeSet(BUTTONS_GPIO_BASE, ALL_BUTTONS, GPIO_FALLING_EDGE);
+
+    /* Enable the interrupt for LaunchPad GPIO Port in the GPIO peripheral. */
+    GPIOIntEnable(BUTTONS_GPIO_BASE, ALL_BUTTONS);
+
+    /* Enable the Port J interrupt in the NVIC. */
+    IntEnable(INT_GPIOJ);
+
+    /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
 }
 
@@ -298,6 +363,10 @@ static void prvSetupHardware(void)
     prvConfigureUART();
 
     //Config_Timers();
+    prvConfigureLED();
+
+    /* Configure the button. */
+    prvConfigureButton();
 
     /* Configure the I2C2 for temp and lux sensor comms */
     prvConfigureI2C2();
