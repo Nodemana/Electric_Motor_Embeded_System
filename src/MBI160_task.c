@@ -27,6 +27,7 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/timer.h"
 #include "timers.h"
+#include "math.h"
 
 // UART inlcudes
 #include "driverlib/uart.h"
@@ -219,9 +220,10 @@ static void prvReadAccelSensor(void *pvParameters)
                 accel_z_g = convert_raw_to_g(fabs(AccelerationXYZ.z));
                 // Get average acceleration component
                 accel_avg = (accel_x_g + accel_y_g + accel_z_g) / 3;
-
+                float accel_mag = sqrtf((accel_x_g*accel_x_g) + (accel_y_g*accel_y_g) + (accel_z_g*accel_z_g));
                 // Filter result
                 filteredAccel = movingAccelAverage(accel_avg);
+                float filteredMag = movingAccelAverage(filteredMag);
 
                 // Put data in que structure
                 AccelMsg.ClaclulatedData = filteredAccel;
@@ -246,10 +248,12 @@ static void prvReadAccelSensor(void *pvParameters)
                 char accel_y_msg[23] = "Acceleartion Y = : %f\n";
                 char accel_z_msg[23] = "Acceleartion Z = : %f\n";
                 char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
+                char accel_mag_msg[25] = "Acceleartion mag = : %f\n";
                 // UartPrintFloat(accel_x_msg, sizeof(accel_x_msg), accel_x_g);
                 // UartPrintFloat(accel_y_msg, sizeof(accel_y_msg), accel_y_g);
                 // UartPrintFloat(accel_z_msg, sizeof(accel_z_msg), accel_z_g);
                 // UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), AccelMsg.ClaclulatedData);
+                // UartPrintFloat(accel_mag_msg, sizeof(accel_mag_msg), filteredMag);
                 // UARTprintf("\n");
             }
             else
