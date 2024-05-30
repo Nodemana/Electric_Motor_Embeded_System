@@ -249,7 +249,7 @@ static void prvMotorTask(void *pvParameters)
     /* Initialise the motors and set the duty cycle (speed) in microseconds */
     initMotorLib(period_value);
     /* Set at >10% to get it to start */
-    setDuty(duty_value);
+    // setDuty(duty_value);
 
     /* Kick start the motor */
 

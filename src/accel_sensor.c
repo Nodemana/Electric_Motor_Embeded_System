@@ -226,7 +226,7 @@ static void prvReadAccelSensor(void *pvParameters)
                 float filteredMag = movingAccelAverage(filteredMag);
 
                 // Put data in que structure
-                AccelMsg.ClaclulatedData = filteredAccel;
+                AccelMsg.CalculatedData = filteredAccel;
                 AccelMsg.TimeStamp = xTaskGetTickCount();
                 
                 // Send data to the que

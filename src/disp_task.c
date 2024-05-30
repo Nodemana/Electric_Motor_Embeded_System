@@ -469,8 +469,8 @@ tCanvasWidget g_psPanels[] =
 //*****************************************************************************
 char *g_pcPanei32Names[] =
     {
-        "     Page One     ",
-        "     Page Two     ",
+        "     Control     ",
+        "     Plots     ",
         "     S/W Update    "};
 
 //*****************************************************************************
@@ -1050,12 +1050,6 @@ void init_display(void)
 void update_data_arrays(void)
 {
     const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
-    EventBits_t DisplayBits;
-    SensorMsg xReceivedMessage;
-    SensorMsg xLuxReceivedMessage;
-    CalcMsg   xAccelReceivedMessage;
-    SensorMsg xPowerReceivedMessage;
-    SensorMsg xSpeedReceivedMessage;
     static char pcCanvasText[5];
 
     /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
