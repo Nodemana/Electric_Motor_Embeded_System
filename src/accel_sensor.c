@@ -27,6 +27,7 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/timer.h"
 #include "timers.h"
+#include "math.h"
 
 // UART inlcudes
 #include "driverlib/uart.h"
@@ -50,7 +51,7 @@
  * -------------------------------------------------------------------------------------------------
  */
 // Define moving average window size
-// #define WINDOW_SIZE 6   // Window size of moving average
+#define ACCEL_WINDOW_SIZE 6   // Window size of moving average
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Extern Global Variables
@@ -63,13 +64,15 @@ extern uint32_t g_ui32SysClock;
 // The binary semaphore used by the timer ISR & task
 extern SemaphoreHandle_t xAccelTimerSemaphore;
 
+
+
 /* ------------------------------------------------------------------------------------------------
  *                                     Local Global Variables
  * -------------------------------------------------------------------------------------------------
  */
 // // Declare array to store sampled data for moving average
-// uint16_t sampledData[WINDOW_SIZE];
-// uint8_t currentIndex = 0;
+float sampledAccelData[ACCEL_WINDOW_SIZE];
+uint8_t currentAccelIndex = 0;
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
@@ -90,6 +93,9 @@ void vACCELTask(void);
 /* Timer Functions */
 void vAccelTimerCallback(TimerHandle_t xTimer); // Handles the timer interupt
 void vAccelSoftwareTimer(void);                 // Software timer
+
+/* Moving average for acceleration */
+float movingAccelAverage(float newValue);
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Functions
@@ -125,11 +131,19 @@ void vAccelSoftwareTimer(void)
 {
     // Create a timer
     TimerHandle_t xTimer = xTimerCreate(
+<<<<<<< HEAD
         "AccelTimer",        // Name of the timer
         pdMS_TO_TICKS(1000), // Timer period in ticks (1 second here)
         pdTRUE,              // Auto-reload
         (void *)0,           // Timer ID
         vAccelTimerCallback  // Callback function
+=======
+        "AccelTimer",                // Name of the timer
+        pdMS_TO_TICKS(10),    // Timer period in ticks (10ms second here)
+        pdTRUE,                 // Auto-reload
+        (void *)0,              // Timer ID
+        vAccelTimerCallback          // Callback function
+>>>>>>> origin/bmi_sensor
     );
 
     // Check if the timer was created successfully
@@ -168,8 +182,35 @@ void vAccelTimerCallback(TimerHandle_t xTimer)
     portYIELD_FROM_ISR(xAccelTaskWoken);
 }
 
+// Function to calculate moving average
+static float sum = 0;
+float movingAccelAverage(float newValue)
+{
+    // Update sum with new value
+    sum += newValue - sampledAccelData[currentAccelIndex];
+
+    // Update sampled data array
+    sampledAccelData[currentAccelIndex] = newValue;
+
+    // Increment index, wrap around if necessary
+    currentAccelIndex = (currentAccelIndex + 1) % ACCEL_WINDOW_SIZE;
+
+    // Return average
+    return sum / ACCEL_WINDOW_SIZE;
+}
+
+
 static void prvReadAccelSensor(void *pvParameters)
 {
+    // Init message que
+    CalcMsg AccelMsg; //, *pxPointerToLuxMessage;
+
+    // Init data
+    float filteredAccel = 0;
+    float accel_x_g = 0;
+    float accel_y_g = 0;
+    float accel_z_g = 0;
+    float accel_avg = 0;
     // Loop Forever
     while (1)
     {
@@ -179,11 +220,20 @@ static void prvReadAccelSensor(void *pvParameters)
             // SysCtlDelay(g_ui32SysClock);
             s8 result = bmi160_read_accel_xyz(&AccelerationXYZ);
             /* Convert the raw data into acceleration */
-            float accel_x_g = convert_raw_to_g(fabs(AccelerationXYZ.x));
-            float accel_y_g = convert_raw_to_g(fabs(AccelerationXYZ.y));
-            float accel_z_g = convert_raw_to_g(fabs(AccelerationXYZ.z));
-            float accel_avg = (accel_x_g + accel_y_g + accel_z_g) / 3;
+            if (result == 0)
+            {
+                // Get each acceleration component
+                accel_x_g = convert_raw_to_g(fabs(AccelerationXYZ.x));
+                accel_y_g = convert_raw_to_g(fabs(AccelerationXYZ.y));
+                accel_z_g = convert_raw_to_g(fabs(AccelerationXYZ.z));
+                // Get average acceleration component
+                accel_avg = (accel_x_g + accel_y_g + accel_z_g) / 3;
+                float accel_mag = sqrtf((accel_x_g*accel_x_g) + (accel_y_g*accel_y_g) + (accel_z_g*accel_z_g));
+                // Filter result
+                filteredAccel = movingAccelAverage(accel_avg);
+                float filteredMag = movingAccelAverage(filteredMag);
 
+<<<<<<< HEAD
             // UARTprintf("\n");
             char accel_x_msg[23] = "Acceleartion X = : %f\n";
             char accel_y_msg[23] = "Acceleartion Y = : %f\n";
@@ -194,6 +244,43 @@ static void prvReadAccelSensor(void *pvParameters)
             // UartPrintFloat(accel_z_msg, sizeof(accel_z_msg), accel_z_g);
             // UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), accel_avg);
             // UARTprintf("\n");
+=======
+                // Put data in que structure
+                AccelMsg.CalculatedData = filteredAccel;
+                AccelMsg.TimeStamp = xTaskGetTickCount();
+                
+                // Send data to the que
+                xQueueSend(/* The handle of the queue. */
+                           xAccelSensorQueue,
+                           /* The address of the LuxMessage variable.
+                            * sizeof( struct AMessage ) bytes are copied from here into
+                            * the queue. */
+                           (void *)&AccelMsg,
+                           /* Block time of 0 says don't block if the queue is already
+                            * full.  Check the value returned by xQueueSend() to know
+                            * if the message was sent to the queue successfully. */
+                           (TickType_t)0);
+                           vTaskDelay(pdMS_TO_TICKS(500));
+                xEventGroupSetBits(xSensorEventGroup, ACCEL_DATA_READY);
+
+                // UARTprintf("\n");
+                char accel_x_msg[23] = "Acceleartion X = : %f\n";
+                char accel_y_msg[23] = "Acceleartion Y = : %f\n";
+                char accel_z_msg[23] = "Acceleartion Z = : %f\n";
+                char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
+                char accel_mag_msg[25] = "Acceleartion mag = : %f\n";
+                // UartPrintFloat(accel_x_msg, sizeof(accel_x_msg), accel_x_g);
+                // UartPrintFloat(accel_y_msg, sizeof(accel_y_msg), accel_y_g);
+                // UartPrintFloat(accel_z_msg, sizeof(accel_z_msg), accel_z_g);
+                // UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), AccelMsg.ClaclulatedData);
+                // UartPrintFloat(accel_mag_msg, sizeof(accel_mag_msg), filteredMag);
+                // UARTprintf("\n");
+            }
+            else
+            {
+                UARTprintf("BMI read unseccusfull\n\n");
+            }
+>>>>>>> origin/bmi_sensor
         }
     }
 }

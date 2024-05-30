@@ -229,7 +229,7 @@ BMI160_RETURN_FUNCTION_TYPE configureBMI160( void )
     s_bmi160.delay_msec(delay);
     com_rslt += bmi160_set_command_register(ACCEL_MODE_NORMAL); 
     s_bmi160.delay_msec(delay);
-    com_rslt += bmi160_set_accel_output_data_rate(BMI160_ACCEL_OUTPUT_DATA_RATE_100HZ);
+    com_rslt += bmi160_set_accel_output_data_rate(BMI160_ACCEL_OUTPUT_DATA_RATE_200HZ); // Not sure what this value should be. Changed from 100Hz to 200Hz
     s_bmi160.delay_msec(delay);
     com_rslt += bmi160_set_accel_bw(0x02);
     s_bmi160.delay_msec(delay);
