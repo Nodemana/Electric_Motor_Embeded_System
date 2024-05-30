@@ -131,7 +131,7 @@ void vAccelSoftwareTimer( void )
     // Create a timer
     TimerHandle_t xTimer = xTimerCreate(
         "AccelTimer",                // Name of the timer
-        pdMS_TO_TICKS(100),    // Timer period in ticks (100ms second here)
+        pdMS_TO_TICKS(10),    // Timer period in ticks (10ms second here)
         pdTRUE,                 // Auto-reload
         (void *)0,              // Timer ID
         vAccelTimerCallback          // Callback function
@@ -241,7 +241,7 @@ static void prvReadAccelSensor(void *pvParameters)
                            vTaskDelay(pdMS_TO_TICKS(500));
                 xEventGroupSetBits(xSensorEventGroup, ACCEL_DATA_READY);
 
-                UARTprintf("\n");
+                // UARTprintf("\n");
                 char accel_x_msg[23] = "Acceleartion X = : %f\n";
                 char accel_y_msg[23] = "Acceleartion Y = : %f\n";
                 char accel_z_msg[23] = "Acceleartion Z = : %f\n";
@@ -250,7 +250,7 @@ static void prvReadAccelSensor(void *pvParameters)
                 // UartPrintFloat(accel_y_msg, sizeof(accel_y_msg), accel_y_g);
                 // UartPrintFloat(accel_z_msg, sizeof(accel_z_msg), accel_z_g);
                 // UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), AccelMsg.ClaclulatedData);
-                UARTprintf("\n");
+                // UARTprintf("\n");
             }
             else
             {

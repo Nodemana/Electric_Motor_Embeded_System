@@ -1027,8 +1027,8 @@ void update_data_arrays(void)
         {
             // Update data array with new data to plot
             update_data_array(accel_data, xAccelReceivedMessage.ClaclulatedData);
-            char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
-            UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), xAccelReceivedMessage.ClaclulatedData);
+            // char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
+            // UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), xAccelReceivedMessage.ClaclulatedData);
         }
     }
     else if (current_array_size > 0)
