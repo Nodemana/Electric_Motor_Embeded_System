@@ -350,13 +350,13 @@ Canvas(g_sCanvas1, g_psPanels, &g_sCanvas2, 0,
 tSliderWidget g_psSliders[] =
     {
         SliderStruct(g_psPanels, g_psSliders + 1, 0,
-                     &g_sKentec320x240x16_SSD2119, 10, 87, 220, 25, 0, 100, 25,
+                     &g_sKentec320x240x16_SSD2119, 10, 87, 220, 25, 0, 100, 50,
                      (SL_STYLE_FILL | SL_STYLE_BACKG_FILL | SL_STYLE_OUTLINE |
                       SL_STYLE_TEXT | SL_STYLE_BACKG_TEXT),
                      ClrRed, ClrGray, ClrSilver, ClrWhite, ClrWhite,
                      &g_sFontCm20, "Power", 0, 0, OnSliderChange),
         SliderStruct(g_psPanels, g_psSliders + 2, 0,
-                     &g_sKentec320x240x16_SSD2119, 10, 122, 220, 25, 0, 100, 25,
+                     &g_sKentec320x240x16_SSD2119, 10, 122, 220, 25, 0, 100, 50,
                      (SL_STYLE_FILL | SL_STYLE_BACKG_FILL | SL_STYLE_OUTLINE |
                       SL_STYLE_TEXT | SL_STYLE_BACKG_TEXT),
                      ClrRed, ClrGray, ClrSilver, ClrWhite, ClrWhite,
