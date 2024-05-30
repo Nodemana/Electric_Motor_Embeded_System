@@ -97,10 +97,6 @@
 #define POWER_THRESHOLD_SCALER 0.5
 #define SET_SPEED_SCALER 120
 #define ACCELERATION_THRESHOLD_SCALER 0.1
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/bmi_sensor
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Extern Global Variables
@@ -114,12 +110,6 @@ extern SemaphoreHandle_t xPlotTimerSemaphore;
 extern SemaphoreHandle_t xSharedSetSpeedFromGUI;
 extern SemaphoreHandle_t xSharedPowerThresholdFromGUI;
 extern SemaphoreHandle_t xSharedAccelerationThresholdFromGUI;
-<<<<<<< HEAD
-=======
-
-
-
->>>>>>> origin/bmi_sensor
 
 /*
  * The is the event group which tasks will read (i.e. GUI, E-STOP conditions)
@@ -159,13 +149,8 @@ bool night_flag = true;
 // Axis data
 typedef struct
 {
-<<<<<<< HEAD
-    uint32_t min; // Minimun value to plot
-    uint32_t max; // Minimun value to plot
-=======
     float min;           // Minimun value to plot
     float max;           // Minimun value to plot
->>>>>>> origin/bmi_sensor
 } DataRange;
 
 DataRange Lux_Data_Range;
@@ -199,11 +184,6 @@ uint32_t Shared_Set_Speed;
 uint32_t Shared_Power_Threshold = 50;
 double Shared_Acceleration_Threshold;
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> origin/bmi_sensor
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
  * -------------------------------------------------------------------------------------------------
@@ -213,19 +193,11 @@ void init_display(void);
 void define_sensor_axis(void);
 
 void update_data_arrays(void);
-<<<<<<< HEAD
-void update_data_arrays(void);
-void clearAxis(int backround_colour);
-void clearScreen(int backround_colour);
-
-void plot_data(uint32_t *data_arr, DataRange data_range);
-=======
 // void update_data_arrays(void);
 void clearAxis (int backround_colour );
 void clearScreen (int backround_colour );
 
 void plot_data(float * data_arr, DataRange data_range);
->>>>>>> origin/bmi_sensor
 /*
  * Called by main() to do example specific hardware configurations and to
  * create the Process Switch task.
@@ -249,11 +221,7 @@ static void prvPlotTask(void *pvParameters);
 /*
  * Function to update the data array
  */
-<<<<<<< HEAD
-void update_data_array(uint32_t *data_arr, uint32_t new_data);
-=======
 void update_data_array(float * data_arr, float new_data);
->>>>>>> origin/bmi_sensor
 /*-----------------------------------------------------------*/
 
 /* ------------------------------------------------------------------------------------------------
@@ -848,14 +816,6 @@ void xyPlaneDraw(DataRange data_range, bool grid_on)
     {
         // Plot each interval of y on y-axis
         GrContextFontSet(&sContext, &g_sFontCm16);
-<<<<<<< HEAD
-        int y_range = data_range.max - data_range.min;
-        int interval = y_range / (NUMBER_Y_TICKS - 1);
-        usprintf(cstr, "%d", i * interval);
-        GrStringDrawCentered(&sContext, cstr, -1,
-                             X_AXIS_ORIGIN - 20, (Y_AXIS_ORIGIN - 0) - (i * (Y_AXIS_LENGTH - 0) / (NUMBER_Y_TICKS - 1)), 0);
-        GrLineDrawH(&sContext, X_AXIS_ORIGIN - 4, X_AXIS_ORIGIN + 4, (Y_AXIS_ORIGIN - 0) - (i * (Y_AXIS_LENGTH - 0) / (NUMBER_Y_TICKS - 1)));
-=======
         float y_range = data_range.max - data_range.min;
         float interval = y_range / (float)(NUMBER_Y_TICKS-1);
         if ((int)interval * 2 == 0)
@@ -871,7 +831,6 @@ void xyPlaneDraw(DataRange data_range, bool grid_on)
         GrStringDrawCentered(&sContext, output, -1,
                              X_AXIS_ORIGIN - 20, (Y_AXIS_ORIGIN - 0) - (i * (Y_AXIS_LENGTH-0) / (NUMBER_Y_TICKS-1)), 0); // set -0 to -1.5 to be exact
         GrLineDrawH(&sContext, X_AXIS_ORIGIN -4, X_AXIS_ORIGIN + 4,  (Y_AXIS_ORIGIN-0) - (i * (Y_AXIS_LENGTH-0) / (NUMBER_Y_TICKS-1)));
->>>>>>> origin/bmi_sensor
     }
 }
 void clearAxis(int backround_colour)
@@ -900,11 +859,7 @@ void define_sensor_axis(void)
 {
 }
 
-<<<<<<< HEAD
-void update_data_array(uint32_t *data_arr, uint32_t new_data)
-=======
 void update_data_array(float * data_arr, float new_data)
->>>>>>> origin/bmi_sensor
 {
     if (current_array_size <= (NUMBER_DATA_POINTS - 1))
     {
@@ -926,16 +881,6 @@ void update_data_array(float * data_arr, float new_data)
     // UARTprintf("\n");
 }
 
-<<<<<<< HEAD
-void plot_data(uint32_t *data_arr, DataRange data_range)
-{
-    uint32_t y_step_size = (data_range.max - data_range.min) / Y_AXIS_LENGTH;
-    uint32_t x_time_step = (X_AXIS_LENGTH / NUMBER_DATA_POINTS);
-    uint32_t y_data = 0;
-    uint32_t x_data = 0;
-    uint32_t prev_x_data = 0;
-    uint32_t prev_y_data = 0;
-=======
 void plot_data(float * data_arr, DataRange data_range)
 {
     float y_step_size = ( (data_range.max - data_range.min) / Y_AXIS_LENGTH );
@@ -944,7 +889,6 @@ void plot_data(float * data_arr, DataRange data_range)
     float x_data = 0;
     float prev_x_data = 0;
     float prev_y_data = 0;
->>>>>>> origin/bmi_sensor
 
     // Check if moving graph window should start
     if (current_array_size <= (NUMBER_DATA_POINTS - 1))
@@ -954,13 +898,8 @@ void plot_data(float * data_arr, DataRange data_range)
         // UARTprintf("y_data = %d, prev_y_data = %d", y_data, prev_y_data);
         for (int i = 0; i < current_array_size; i++)
         {
-<<<<<<< HEAD
-            x_data = X_AXIS_ORIGIN + (x_time_step * i) + 10;
-            if (data_arr[i] >= data_range.max)
-=======
             x_data = (X_AXIS_ORIGIN + (x_time_step * i) + 10);
             if (data_arr[i] >= data_range.max) 
->>>>>>> origin/bmi_sensor
             {
                 y_data = (Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
@@ -984,23 +923,14 @@ void plot_data(float * data_arr, DataRange data_range)
         GrContextForegroundSet(&sContext, ClrDarkBlue);
         for (int i = 0; i < NUMBER_DATA_POINTS; i++)
         {
-<<<<<<< HEAD
-            x_data = X_AXIS_ORIGIN + (x_time_step * i) + 10;
-            if (data_arr[i] > data_range.max)
-=======
             x_data = (X_AXIS_ORIGIN + (x_time_step * i) + 10);
             if (data_arr[i] > data_range.max) 
->>>>>>> origin/bmi_sensor
             {
                 y_data = (Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
             else
             {
-<<<<<<< HEAD
-                y_data = Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5;
-=======
                 y_data = (Y_AXIS_ORIGIN -  (data_arr[i] / y_step_size) - 1.5);
->>>>>>> origin/bmi_sensor
             }
             GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
@@ -1114,15 +1044,6 @@ void init_display(void)
 void update_data_arrays(void)
 {
     const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
-<<<<<<< HEAD
-    EventBits_t DisplayBits;
-    SensorMsg xReceivedMessage;
-    SensorMsg xLuxReceivedMessage;
-    SensorMsg xAccelReceivedMessage;
-    SensorMsg xPowerReceivedMessage;
-    SensorMsg xSpeedReceivedMessage;
-=======
->>>>>>> origin/bmi_sensor
     static char pcCanvasText[5];
 
     /* Wait a maximum of 100ms for either bit 0 or bit 4 to be set within the event group. Clear the bits before exiting. */
@@ -1141,11 +1062,7 @@ void update_data_arrays(void)
                           (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
-<<<<<<< HEAD
-            update_data_array(lux_data, xLuxReceivedMessage.SensorReading);
-=======
             update_data_array(lux_data, (float)xLuxReceivedMessage.SensorReading);
->>>>>>> origin/bmi_sensor
 
             // threshold check
             if (xLuxReceivedMessage.SensorReading >= 5)
@@ -1181,13 +1098,8 @@ void update_data_arrays(void)
         update_data_array(lux_data, (float)xLuxReceivedMessage.SensorReading);
     }
 
-<<<<<<< HEAD
-    /*** TEMP ***/
-    if (((DisplayBits & (ACCEL_DATA_READY)) == (ACCEL_DATA_READY)))
-=======
     /*** ACCEL ***/
     if ( ( ( DisplayBits & (ACCEL_DATA_READY) ) == (ACCEL_DATA_READY) ) )
->>>>>>> origin/bmi_sensor
     {
         if (xQueueReceive(xAccelSensorQueue,
                           &(xAccelReceivedMessage),
@@ -1254,17 +1166,12 @@ static void prvDisplayTask(void *pvParameters)
         //
         WidgetMessageQueueProcess();
 
-<<<<<<< HEAD
         if (xSemaphoreTake(xSharedSetSpeedFromGUI, 0) == pdPASS)
         {
-=======
-        if(xSemaphoreTake(xSharedSetSpeedFromGUI, 0) == pdPASS) {
->>>>>>> origin/bmi_sensor
             Shared_Set_Speed = Set_Speed * SET_SPEED_SCALER;
             xSemaphoreGive(xSharedSetSpeedFromGUI);
         }
 
-<<<<<<< HEAD
         if (xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS)
         {
             Shared_Power_Threshold = (double)Power_Threshold * POWER_THRESHOLD_SCALER;
@@ -1273,14 +1180,6 @@ static void prvDisplayTask(void *pvParameters)
 
         if (xSemaphoreTake(xSharedAccelerationThresholdFromGUI, 0) == pdPASS)
         {
-=======
-        if(xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS) {
-            Shared_Power_Threshold = (double)Power_Threshold * POWER_THRESHOLD_SCALER;
-            xSemaphoreGive(xSharedPowerThresholdFromGUI);
-        }
-        
-        if(xSemaphoreTake(xSharedAccelerationThresholdFromGUI, 0) == pdPASS) {
->>>>>>> origin/bmi_sensor
             Shared_Acceleration_Threshold = (double)Acceleration_Threshold * ACCELERATION_THRESHOLD_SCALER;
             xSemaphoreGive(xSharedAccelerationThresholdFromGUI);
         }
@@ -1326,17 +1225,6 @@ static void prvPlotTask(void *pvParameters)
                 plot_data(lux_data, Lux_Data_Range);
                 break;
 
-<<<<<<< HEAD
-            case TEMP:
-                if (state_changed)
-                {
-                    clearScreen(ClrWhite);
-                    xyPlaneDraw(Temp_Data_Range, false);
-                    state_changed = false;
-                }
-                plot_data(temp_data, Temp_Data_Range);
-                break;
-=======
                 case TEMP:
                     if (state_changed)
                     {
@@ -1346,7 +1234,6 @@ static void prvPlotTask(void *pvParameters)
                     }
                     plot_data(accel_data, Accel_Data_Range);
                     break;
->>>>>>> origin/bmi_sensor
 
             case POWER:
                 if (state_changed)
@@ -1389,19 +1276,11 @@ void vPlotSoftwareTimer(void)
 {
     // Create a timer
     TimerHandle_t xPlotTimer = xTimerCreate(
-<<<<<<< HEAD
-        "Timer",             // Name of the timer
-        pdMS_TO_TICKS(1000), // Timer period in ticks (1 second here)
-        pdTRUE,              // Auto-reload
-        (void *)0,           // Timer ID
-        vPlotTimerCallback   // Callback function
-=======
         "Timer",                // Name of the timer
         pdMS_TO_TICKS(500),    // Timer period in ticks (1 second here)
         pdTRUE,                 // Auto-reload
         (void *)0,              // Timer ID
         vPlotTimerCallback      // Callback function
->>>>>>> origin/bmi_sensor
     );
 
     // Check if the timer was created successfully

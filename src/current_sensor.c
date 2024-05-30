@@ -120,11 +120,7 @@ extern motor_control_state;
  *                                     Local Global Variables
  * -------------------------------------------------------------------------------------------------
  */
-<<<<<<< HEAD
 uint32_t Threshold = 5000;
-=======
-uint32_t Threshold = 50;
->>>>>>> origin/bmi_sensor
 
 // Declare array to store sampled data for moving average
 float sampleWindow[WINDOW_SIZE];
@@ -264,12 +260,9 @@ static void prvCurrentSensorTask( void *pvParameters) {
             avg_power = rollingAverage(0);
         }
 
-<<<<<<< HEAD
         // char power_msg[18] = "\n Total power: %f";
         // UartPrintFloat(power_msg, sizeof(power_msg), avg_power);
 
-=======
->>>>>>> origin/bmi_sensor
         if(xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS) {
             Threshold = Shared_Power_Threshold;
                 // char power_msg[18] = "\n Total power: %f\n";
@@ -277,7 +270,6 @@ static void prvCurrentSensorTask( void *pvParameters) {
 
             xSemaphoreGive(xSharedPowerThresholdFromGUI);
         }
-<<<<<<< HEAD
 
         if(avg_power > Threshold){
             char power_msg[14] = "\n ESTOP: %f\n";
@@ -299,26 +291,11 @@ static void prvCurrentSensorTask( void *pvParameters) {
 
             xSemaphoreGive(xESTOPSemaphore);
         }
-=======
-        if(motor_control_state == RUNNING){
-            if(power > Threshold){
-                char power_msg[18] = "\n Total power: %f\n";
-                UartPrintFloat(power_msg, sizeof(power_msg), power);
-                xSemaphoreGive(xESTOPSemaphore);
-            }
-        }
-
-
->>>>>>> origin/bmi_sensor
 
         // char power_msg[18] = "\n Total power: %f\n";
         // UartPrintFloat(power_msg, sizeof(power_msg), avgPower);
 
-<<<<<<< HEAD
         msg.CalculatedData = avg_power;
-=======
-        msg.CalculatedData = power;
->>>>>>> origin/bmi_sensor
         msg.TimeStamp = xTaskGetTickCount();
 
         // Step 5: Add estimate to averaging list.

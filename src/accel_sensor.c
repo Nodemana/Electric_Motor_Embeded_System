@@ -131,19 +131,11 @@ void vAccelSoftwareTimer(void)
 {
     // Create a timer
     TimerHandle_t xTimer = xTimerCreate(
-<<<<<<< HEAD
-        "AccelTimer",        // Name of the timer
-        pdMS_TO_TICKS(1000), // Timer period in ticks (1 second here)
-        pdTRUE,              // Auto-reload
-        (void *)0,           // Timer ID
-        vAccelTimerCallback  // Callback function
-=======
         "AccelTimer",                // Name of the timer
         pdMS_TO_TICKS(10),    // Timer period in ticks (10ms second here)
         pdTRUE,                 // Auto-reload
         (void *)0,              // Timer ID
         vAccelTimerCallback          // Callback function
->>>>>>> origin/bmi_sensor
     );
 
     // Check if the timer was created successfully
@@ -233,18 +225,6 @@ static void prvReadAccelSensor(void *pvParameters)
                 filteredAccel = movingAccelAverage(accel_avg);
                 float filteredMag = movingAccelAverage(filteredMag);
 
-<<<<<<< HEAD
-            // UARTprintf("\n");
-            char accel_x_msg[23] = "Acceleartion X = : %f\n";
-            char accel_y_msg[23] = "Acceleartion Y = : %f\n";
-            char accel_z_msg[23] = "Acceleartion Z = : %f\n";
-            char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
-            // UartPrintFloat(accel_x_msg, sizeof(accel_x_msg), accel_x_g);
-            // UartPrintFloat(accel_y_msg, sizeof(accel_y_msg), accel_y_g);
-            // UartPrintFloat(accel_z_msg, sizeof(accel_z_msg), accel_z_g);
-            // UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), accel_avg);
-            // UARTprintf("\n");
-=======
                 // Put data in que structure
                 AccelMsg.CalculatedData = filteredAccel;
                 AccelMsg.TimeStamp = xTaskGetTickCount();
@@ -280,7 +260,6 @@ static void prvReadAccelSensor(void *pvParameters)
             {
                 UARTprintf("BMI read unseccusfull\n\n");
             }
->>>>>>> origin/bmi_sensor
         }
     }
 }
