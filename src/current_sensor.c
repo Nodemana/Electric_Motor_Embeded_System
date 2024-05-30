@@ -191,7 +191,6 @@ void vCreateCurrentSensorTask( void )
 /*-----------------------------------------------------------*/
 
 // TODO:
-//  - Get latest hall effect sensor data
 //  - Estimate current using hall effect sensor data, current phase voltage and the state diagram from https://canvas.qut.edu.au/courses/17133/pages/egh456-assessment-2-design-of-embedded-system-for-electric-vehicle-group-project-details?module_item_id=1511474
 //  - Create buffer with window size of at least 5
 //  - Create filter 
