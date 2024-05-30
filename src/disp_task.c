@@ -1118,7 +1118,7 @@ void update_data_arrays(void)
                           (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
-            update_data_array(accel_data, xAccelReceivedMessage.ClaclulatedData);
+            update_data_array(accel_data, xAccelReceivedMessage.CalculatedData);
             // char accel_avg_msg[25] = "Acceleartion avg = : %f\n";
             // UartPrintFloat(accel_avg_msg, sizeof(accel_avg_msg), xAccelReceivedMessage.ClaclulatedData);
         }
@@ -1126,7 +1126,7 @@ void update_data_arrays(void)
     else if (current_array_size > 0)
     {
         // Update data array with old data to plot
-        update_data_array(accel_data, xAccelReceivedMessage.ClaclulatedData);
+        update_data_array(accel_data, xAccelReceivedMessage.CalculatedData);
     }
 
     /*** POWER ***/
