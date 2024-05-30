@@ -44,6 +44,8 @@
 #include "inc/hw_types.h"
 #include "driverlib/debug.h"
 #include "driverlib/i2c.h"
+#include "driverlib/hibernate.h"
+#include "utils/ustdlib.h"
 
 // Motor lib
 #include <motorlib.h>
@@ -72,7 +74,6 @@ SemaphoreHandle_t xSpeedSemaphore = NULL;
 SemaphoreHandle_t xESTOPSemaphore = NULL;
 SemaphoreHandle_t xControllerSemaphore = NULL;
 
-
 // Mutexes
 SemaphoreHandle_t xSharedSpeedWithController = NULL;
 SemaphoreHandle_t xSharedSpeedESTOPThreshold = NULL;
@@ -80,7 +81,6 @@ SemaphoreHandle_t xSharedDutyWithMotor = NULL;
 SemaphoreHandle_t xSharedSetSpeedFromGUI = NULL;
 SemaphoreHandle_t xSharedPowerThresholdFromGUI = NULL;
 SemaphoreHandle_t xSharedAccelerationThresholdFromGUI = NULL;
-
 
 /* Global for binary semaphore shared between tasks. */
 SemaphoreHandle_t xTimerSemaphore = NULL;
@@ -96,15 +96,14 @@ SemaphoreHandle_
 /* Set up the hardware ready to run this demo. */
 static void prvSetupHardware(void);
 
-//void Config_Timers(void);
+// void Config_Timers(void);
 
 /* This function sets up UART0 to be used for a console to display information
  * as the example is running. */
 static void prvConfigureUART(void);
 
-
 /* Set up buttons. */
-static void prvConfigureButton( void );
+static void prvConfigureButton(void);
 
 /* Set up the I2C2 for temp and lux sensor. */
 static void prvConfigureI2C2(void);
@@ -113,7 +112,7 @@ static void prvConfigureI2C2(void);
 static void prvConfigureTimers(void);
 
 /* API to trigger the 'Hello world' task. */
-extern void vCreateCurrentSensorTask( void );
+extern void vCreateCurrentSensorTask(void);
 
 extern void vCreateMotorTask(void);
 
@@ -131,10 +130,9 @@ extern void vACCELTask(void);
 
 /* API to trigger the que task */
 extern void vQueueTask(void);
-extern void vCreateCurrentSensorTask( void );
+extern void vCreateCurrentSensorTask(void);
 
 static void prvConfigureHallInts(void);
-
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Functions
@@ -163,21 +161,18 @@ int main(void)
     xSharedPowerThresholdFromGUI = xSemaphoreCreateMutex();
     xSharedAccelerationThresholdFromGUI = xSemaphoreCreateMutex();
 
-
-
-     if ((xADCSemaphore != NULL) && 
-        (xSpeedSemaphore != NULL) && 
-        (xTimerSemaphore != NULL) && 
-        (xSharedSpeedWithController != NULL) && 
-        (xSharedSpeedESTOPThreshold != NULL) && 
+    if ((xADCSemaphore != NULL) &&
+        (xSpeedSemaphore != NULL) &&
+        (xTimerSemaphore != NULL) &&
+        (xSharedSpeedWithController != NULL) &&
+        (xSharedSpeedESTOPThreshold != NULL) &&
         (xESTOPSemaphore != NULL) &&
         (xControllerSemaphore != NULL) &&
         (xSharedDutyWithMotor != NULL) &&
         (xPlotTimerSemaphore != NULL) &&
         (xSharedSetSpeedFromGUI != NULL) &&
         (xSharedPowerThresholdFromGUI != NULL) &&
-        (xSharedAccelerationThresholdFromGUI != NULL)
-        )
+        (xSharedAccelerationThresholdFromGUI != NULL))
     {
         vDISPTask();
         vLUXTask();
@@ -186,7 +181,7 @@ int main(void)
         vCreateMotorTask();
         vCreateCurrentSensorTask();
 
-    /* Start the tasks and timer running. */
+        /* Start the tasks and timer running. */
         vTaskStartScheduler();
     }
     /* If all is well, the scheduler will now be running, and the following
@@ -194,20 +189,19 @@ int main(void)
     there was insufficient FreeRTOS heap memory available for the idle and/or
     timer tasks to be created.  See the memory management section on the
     FreeRTOS web site for more details. */
-    for (;;);
+    for (;;)
+        ;
 }
 /*-----------------------------------------------------------*/
 static void prvConfigureUART(void)
 {
     /* Enable GPIO port A which is used for UART0 pins.
-     * TODO: change this to whichever GPIO port you are using. */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);*/
 
     /* Configure the pin muxing for UART0 functions on port A0 and A1.
      * This step is not necessary if your part does not support pin muxing.
-     * TODO: change this to select the port/pin you are using. */
     GPIOPinConfigure(GPIO_PA0_U0RX);
-    GPIOPinConfigure(GPIO_PA1_U0TX);
+    GPIOPinConfigure(GPIO_PA1_U0TX);*/
 
     /* Enable UART0 so that we can configure the clock. */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
@@ -216,8 +210,7 @@ static void prvConfigureUART(void)
     UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
 
     /* Select the alternate (UART) function for these pins.
-     * TODO: change this to select the port/pin you are using. */
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);*/
 
     /* Initialize the UART for console I/O. */
     UARTStdioConfig(0, 9600, 16000000);
@@ -253,6 +246,38 @@ static void prvConfigureI2C2(void)
     I2CMasterEnable(I2C2_BASE);
 }
 
+static void prvConfigureRTC(void)
+{
+    struct tm sTime;
+
+    // Enable the Hibernation module
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_HIBERNATE);
+
+    // Wait for the Hibernation module to be ready
+    while (!SysCtlPeripheralReady(SYSCTL_PERIPH_HIBERNATE))
+    {
+    }
+
+    // Enable the RTC function of the Hibernation module
+    MAP_HibernateEnableExpClk(SysCtlClockGet());
+
+    // Set the RTC trim
+    MAP_HibernateRTCTrimSet(0x7FFF);
+
+    // Enable the RTC
+    MAP_HibernateRTCEnable();
+
+    sTime.tm_mon = 7;
+    sTime.tm_mday = 29;
+    sTime.tm_year = 13;
+    sTime.tm_hour = 8;
+    sTime.tm_min = 30;
+
+    MAP_HibernateCalendarSet(&sTime);
+
+    IntMasterEnable(); // Enable all IRQ
+}
+
 /*-----------------------------------------------------------*/
 
 static void prvConfigureTimers(void)
@@ -272,7 +297,7 @@ static void prvConfigureTimers(void)
     /* Enable the Timer 2A interrupt in the NVIC. */
     IntEnable(INT_TIMER2A);
 
-     /* Enable Timer 2A. */
+    /* Enable Timer 2A. */
     TimerEnable(TIMER2_BASE, TIMER_A);
 
     /* Set the Timer 2B load value to run at 100 Hz. */
@@ -284,7 +309,7 @@ static void prvConfigureTimers(void)
     /* Enable the Timer 2B interrupt in the NVIC. */
     IntEnable(INT_TIMER2B);
 
-     /* Enable Timer 2B. */
+    /* Enable Timer 2B. */
     TimerEnable(TIMER2_BASE, TIMER_B);
 
     /* The Timer 3 peripheral must be enabled for use. */
@@ -309,8 +334,6 @@ static void prvConfigureTimers(void)
     /* Configure the Timer 3A interrupt for timeout. */
     TimerIntEnable(TIMER3_BASE, TIMER_TIMB_TIMEOUT);
 
-    
-
     /* Enable Timer 3A. */
     // TimerEnable(TIMER3_BASE, TIMER_A);
 
@@ -320,7 +343,7 @@ static void prvConfigureTimers(void)
 
 /*-----------------------------------------------------------*/
 
-static void prvConfigureLED( void )
+static void prvConfigureLED(void)
 {
     /* Initialize LED 2 */
     LEDWrite(LED_D2, LED_D2);
@@ -328,7 +351,7 @@ static void prvConfigureLED( void )
 
 /*-----------------------------------------------------------*/
 
-static void prvConfigureButton( void )
+static void prvConfigureButton(void)
 {
     /* Initialize the LaunchPad Buttons. */
     ButtonsInit();
@@ -354,7 +377,7 @@ static void prvSetupHardware(void)
     g_ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
                                              SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
                                              SYSCTL_CFG_VCO_240),
-                                             configCPU_CLOCK_HZ);
+                                            configCPU_CLOCK_HZ);
 
     /* Configure device pins. */
     PinoutSet(false, false);
@@ -362,7 +385,7 @@ static void prvSetupHardware(void)
     /* Configure UART0 to send messages to terminal. */
     prvConfigureUART();
 
-    //Config_Timers();
+    // Config_Timers();
     prvConfigureLED();
 
     /* Configure the button. */
@@ -373,7 +396,10 @@ static void prvSetupHardware(void)
 
     /* Configure the hardware timer to run in periodic mode. */
     prvConfigureTimers();
-    
+
+    // RTC Timer
+    prvConfigureRTC();
+
     // GPIOPinTypeGPIOInput(GPIO_PORTM_BASE, GPIO_PIN_3);
     // GPIOPinTypeGPIOInput(GPIO_PORTH_BASE, GPIO_PIN_2);
     // GPIOPinTypeGPIOInput(GPIO_PORTN_BASE, GPIO_PIN_2);
@@ -432,7 +458,6 @@ static void prvConfigureHallInts(void)
     /* Enable global interrupts in the NVIC. */
     IntMasterEnable();
 }
-
 
 /*-----------------------------------------------------------*/
 

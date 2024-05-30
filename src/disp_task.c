@@ -59,6 +59,7 @@
 #include "driverlib/udma.h"
 #include "driverlib/rom.h"
 #include "driverlib/rom_map.h"
+#include "driverlib/hibernate.h"
 #include "grlib/grlib.h"
 #include "grlib/widget.h"
 #include "grlib/canvas.h"
@@ -216,6 +217,180 @@ static void prvPlotTask(void *pvParameters);
  */
 void update_data_array(uint32_t *data_arr, uint32_t new_data);
 /*-----------------------------------------------------------*/
+
+//*****************************************************************************
+//
+// Flag that informs that date and time have to be set.
+//
+//*****************************************************************************
+volatile bool g_bSetDate;
+
+//*****************************************************************************
+//
+// Variables that keep track of the date and time.
+//
+//*****************************************************************************
+uint32_t g_ui32MonthIdx, g_ui32DayIdx, g_ui32YearIdx;
+uint32_t g_ui32HourIdx, g_ui32MinIdx;
+
+//*****************************************************************************
+//
+// Buffers to store display information.
+//
+//*****************************************************************************
+char g_pcDateTimeBuf[40];
+
+//*****************************************************************************
+//
+// Lookup table to convert numerical value of a month into text.
+//
+//*****************************************************************************
+static char *g_ppcMonth[12] =
+    {
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"};
+
+//*****************************************************************************
+//
+// This function writes the requested date and time to the calendar logic of
+// hibernation module.
+//
+//*****************************************************************************
+void DateTimeSet(void)
+{
+    struct tm sTime;
+
+    //
+    // Get the latest date and time.  This is done here so that unchanged
+    // parts of date and time can be written back as is.
+    //
+    HibernateCalendarGet(&sTime);
+
+    //
+    // Set the date and time values that are to be updated.
+    //
+    sTime.tm_hour = g_ui32HourIdx;
+    sTime.tm_min = g_ui32MinIdx;
+    sTime.tm_mon = g_ui32MonthIdx;
+    sTime.tm_mday = g_ui32DayIdx;
+    sTime.tm_year = 100 + g_ui32YearIdx;
+
+    //
+    // Update the calendar logic of hibernation module with the requested data.
+    //
+    HibernateCalendarSet(&sTime);
+}
+
+//*****************************************************************************
+//
+// This function reads the current date and time from the calendar logic of the
+// hibernate module.  Return status indicates the validity of the data read.
+// If the received data is valid, the 24-hour time format is converted to
+// 12-hour format.
+//
+//*****************************************************************************
+bool DateTimeGet(struct tm *sTime)
+{
+    //
+    // Get the latest time.
+    //
+    MAP_HibernateCalendarGet(sTime);
+    UARTprintf("\n\n How about now?");
+
+    //
+    // Is valid data read?
+    //
+    if (((sTime->tm_sec < 0) || (sTime->tm_sec > 59)) ||
+        ((sTime->tm_min < 0) || (sTime->tm_min > 59)) ||
+        ((sTime->tm_hour < 0) || (sTime->tm_hour > 23)) ||
+        ((sTime->tm_mday < 1) || (sTime->tm_mday > 31)) ||
+        ((sTime->tm_mon < 0) || (sTime->tm_mon > 11)) ||
+        ((sTime->tm_year < 100) || (sTime->tm_year > 199)))
+    {
+        //
+        // No - Let the application know the same by returning relevant
+        // message.
+        //
+        return false;
+    }
+
+    //
+    // Return that new data is available so that it can be displayed.
+    //
+    return true;
+}
+
+//*****************************************************************************
+//
+// This function formats valid new date and time to be displayed on the home
+// screen in the format "MMM DD, YYYY  HH : MM : SS AM/PM".  Example of this
+// format is Aug 01, 2013  08:15:30 AM.  It also indicates if valid new data
+// is available or not.  If date and time is invalid, this function sets the
+// date and time to default value.
+//
+//*****************************************************************************
+bool DateTimeDisplayGet(char *pcBuf, uint32_t ui32BufSize)
+{
+    static uint32_t ui32SecondsPrev = 0xFF;
+    struct tm sTime;
+    uint32_t ui32Len;
+
+    //
+    // Get the latest date and time and check the validity.
+    //
+    UARTprintf("\n\nDo we reach here?");
+    if (DateTimeGet(&sTime) == false)
+    {
+        //
+        // Invalid - Force set the date and time to default values and return
+        // false to indicate no information to display.
+        //
+        g_bSetDate = true;
+        return false;
+    }
+
+    //
+    // If date and time is valid, check if seconds have updated from previous
+    // visit.
+    //
+    if (ui32SecondsPrev == sTime.tm_sec)
+    {
+        //
+        // No - Return false to indicate no information to display.
+        //
+        return false;
+    }
+
+    //
+    // If valid new date and time is available, update a local variable to keep
+    // track of seconds to determine new data for next visit.
+    //
+    ui32SecondsPrev = sTime.tm_sec;
+
+    //
+    // Format the date and time into a user readable format.
+    //
+    ui32Len = usnprintf(pcBuf, ui32BufSize, "%s %02u, 20%02u  ",
+                        g_ppcMonth[sTime.tm_mon], sTime.tm_mday,
+                        sTime.tm_year - 100);
+    usnprintf(&pcBuf[ui32Len], ui32BufSize - ui32Len, "%02u : %02u : %02u",
+              sTime.tm_hour, sTime.tm_min, sTime.tm_sec);
+
+    //
+    // Return true to indicate new information to display.
+    //
+    return true;
+}
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Functions
@@ -684,28 +859,28 @@ void OnCanvasPaint(tWidget *psWidget, tContext *psContext)
 //*****************************************************************************
 void OnSliderChange(tWidget *psWidget, int32_t i32Value)
 {
-    static char pcCanvasText[5];
+    // static char pcCanvasText[5];
     static char pcSliderText[5];
 
-    //
-    // Is this the widget whose value we mirror in the canvas widget and the
-    // locked slider?
-    //
-    if (psWidget == (tWidget *)&g_psSliders[SLIDER_CANVAS_VAL_INDEX])
-    {
-        //
-        // Yes - update the canvas to show the slider value.
-        //
-        usprintf(pcCanvasText, "%3d%%", i32Value);
-        CanvasTextSet(&g_sCanvas1, pcCanvasText);
-        WidgetPaint((tWidget *)&g_sCanvas1);
+    // //
+    // // Is this the widget whose value we mirror in the canvas widget and the
+    // // locked slider?
+    // //
+    // if (psWidget == (tWidget *)&g_psSliders[SLIDER_CANVAS_VAL_INDEX])
+    // {
+    //     //
+    //     // Yes - update the canvas to show the slider value.
+    //     //
+    //     usprintf(pcCanvasText, "%3d%%", i32Value);
+    //     CanvasTextSet(&g_sCanvas1, pcCanvasText);
+    //     WidgetPaint((tWidget *)&g_sCanvas1);
 
-        //
-        // Also update the value of the locked slider to reflect this one.
-        //
-        SliderValueSet(&g_psSliders[SLIDER_LOCKED_INDEX], i32Value);
-        WidgetPaint((tWidget *)&g_psSliders[SLIDER_LOCKED_INDEX]);
-    }
+    //     //
+    //     // Also update the value of the locked slider to reflect this one.
+    //     //
+    //     SliderValueSet(&g_psSliders[SLIDER_LOCKED_INDEX], i32Value);
+    //     WidgetPaint((tWidget *)&g_psSliders[SLIDER_LOCKED_INDEX]);
+    // }
 
     if (psWidget == (tWidget *)&g_psSliders[POWER_INDEX])
     {
@@ -1027,7 +1202,7 @@ void update_data_arrays(void)
 {
     const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS;
     EventBits_t DisplayBits;
-    SensorMsg xReceivedMessage;
+    // SensorMsg xReceivedMessage;
     SensorMsg xLuxReceivedMessage;
     SensorMsg xAccelReceivedMessage;
     SensorMsg xPowerReceivedMessage;
@@ -1174,10 +1349,11 @@ static void prvDisplayTask(void *pvParameters)
 
 static void prvPlotTask(void *pvParameters)
 {
+    bool bUpdate;
     //
 
     selected_sensor = NONE;
-    char cstr[10];
+    // char cstr[10];
 
     // Data range structs
     // Lux data ranges
@@ -1196,6 +1372,18 @@ static void prvPlotTask(void *pvParameters)
     {
         if (xSemaphoreTake(xPlotTimerSemaphore, portMAX_DELAY) == pdPASS)
         {
+            UARTprintf("Can we try and update the time here??");
+            //
+            // Update the buffer that displays date and time on the main
+            // screen.
+            //
+            bUpdate = DateTimeDisplayGet(g_pcDateTimeBuf,
+                                         sizeof(g_pcDateTimeBuf));
+
+            if (bUpdate == true)
+            {
+                UARTprintf("The current date and time is: %s\n", g_pcDateTimeBuf);
+            }
             // Update data arrays
             update_data_arrays();
             // Handle the current state
@@ -1246,7 +1434,7 @@ static void prvPlotTask(void *pvParameters)
                 break;
             default:
                 UARTprintf("ERROR\n");
-                return -1;
+                // return -1;
                 break;
             }
             if (current_array_size < NUMBER_DATA_POINTS)
