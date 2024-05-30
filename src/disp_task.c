@@ -163,7 +163,7 @@ EventBits_t DisplayBits;
 SensorMsg xReceivedMessage;
 SensorMsg xLuxReceivedMessage;
 CalcMsg   xAccelReceivedMessage;
-SensorMsg xPowerReceivedMessage;
+CalcMsg   xPowerReceivedMessage;
 SensorMsg xSpeedReceivedMessage;
 uint8_t current_array_size = 0;
 
@@ -1125,7 +1125,7 @@ void update_data_arrays(void)
                           (TickType_t)10) == pdPASS)
         {
             // Update data array with new data to plot
-            update_data_array(power_data, xPowerReceivedMessage.SensorReading);
+            update_data_array(power_data, xPowerReceivedMessage.CalculatedData);
         }
     }
     else if (current_array_size > 0)

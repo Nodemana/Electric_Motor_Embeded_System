@@ -464,8 +464,8 @@ static void prvSpeedSenseTask(void *pvParameters)
             // UARTprintf("Hall States: %d\n", hall_state_counter);
             // UARTprintf("RPS: %d\n", revolutions_per_second);
             // UARTprintf("RPM: %d\n", revolutions_per_minute);
-            UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
-            UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
+            // UARTprintf("Filtered RPM %d\n", filtered_revoltutions_per_minute);
+            // UARTprintf("RPM/s: %d\n\n", acceleration_RPM_per_second);
 
             last_revolutions_per_minute = revolutions_per_minute;
 

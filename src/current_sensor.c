@@ -260,8 +260,8 @@ static void prvCurrentSensorTask( void *pvParameters) {
             avg_power = rollingAverage(0);
         }
 
-        // char power_msg[18] = "\n Total power: %f";
-        // UartPrintFloat(power_msg, sizeof(power_msg), avg_power);
+        char power_msg[18] = "\n Total power: %f";
+        UartPrintFloat(power_msg, sizeof(power_msg), avg_power);
 
         if(xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS) {
             Threshold = Shared_Power_Threshold;
