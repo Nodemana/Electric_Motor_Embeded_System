@@ -235,7 +235,7 @@ static void prvMotorTask(void *pvParameters)
     // uint16_t desired_duty = 100;
 
     int32_t current_speed_RPM;
-    int32_t desired_speed_RPM;
+    int32_t desired_speed_RPM = 1500;
     int32_t integral_error = 0;
 
     bool stopping_flag = false;
@@ -326,9 +326,11 @@ static void prvMotorTask(void *pvParameters)
                 }
             }
 
+UARTprintf("Seen");
             // This should trigger the motor to decelerate until the speed is 0, once speed has reached zero, then set the control state to IDLE
             if (g_pui32ButtonPressed == USR_SW2)
             {
+                UARTprintf("Seen");
                 stopping_flag = true;
                 // Resets button pressed status
                 g_pui32ButtonPressed = 0;
