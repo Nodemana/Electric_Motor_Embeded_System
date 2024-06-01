@@ -238,10 +238,10 @@ static void prvCurrentSensorTask( void *pvParameters) {
                 currents[i] = CalculateCurrent(voltage);
                 char voltage_msg[14] = "\t Voltage: %f";
                 char current_msg[14] = "\t Current: %f";
-                UARTprintf("\nPhase %c: ", phase_letters[i]);
-                UARTprintf("\t raw: %d", raw_Vs[i]);
-                UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
-                UARTprintf("\t Current: %d", (int32_t)(currents[i] * 100));
+                // UARTprintf("\nPhase %c: ", phase_letters[i]);
+                // UARTprintf("\t raw: %d", raw_Vs[i]);
+                // UartPrintFloat(voltage_msg, sizeof(voltage_msg), voltage);
+                // UARTprintf("\t Current: %d", (int32_t)(currents[i] * 100));
             }
 
             float total_cur =  fabsf(currents[1]) + fabsf(currents[2]) * 3/2;//+ fabsf(currents[0]);
@@ -261,7 +261,7 @@ static void prvCurrentSensorTask( void *pvParameters) {
         }
 
         char power_msg[18] = "\n Total power: %f";
-        UartPrintFloat(power_msg, sizeof(power_msg), avg_power);
+        // UartPrintFloat(power_msg, sizeof(power_msg), avg_power);
 
         if(xSemaphoreTake(xSharedPowerThresholdFromGUI, 0) == pdPASS) {
             Threshold = Shared_Power_Threshold;
@@ -273,7 +273,7 @@ static void prvCurrentSensorTask( void *pvParameters) {
 
         if(avg_power > Threshold){
             char power_msg[14] = "\n ESTOP: %f\n";
-            UartPrintFloat(power_msg, sizeof(power_msg), avg_power);
+            // UartPrintFloat(power_msg, sizeof(power_msg), avg_power);
             // char currents_msg[14] = "\n Current: %f";
             // UartPrintFloat(currents_msg, sizeof(currents_msg), total_cur);
 

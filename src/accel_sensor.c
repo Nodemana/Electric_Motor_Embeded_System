@@ -68,17 +68,19 @@ extern SemaphoreHandle_t xAccelTimerSemaphore;
 extern SemaphoreHandle_t xESTOPSemaphore;
 
 // Mutexes
-extern SemaphoreHandle_t xSharedAccelThresholdFromGUI;
+extern SemaphoreHandle_t xSharedAccelerationThresholdFromGUI;
+
+extern float Shared_Power_Threshold;
 
 // Local threshold
-uint32_t Threshold = 2;
+float AccelThreshold = 2;
 /* ------------------------------------------------------------------------------------------------
  *                                     Local Global Variables
  * -------------------------------------------------------------------------------------------------
  */
 // // Declare array to store sampled data for moving average
 float sampledAccelData[ACCEL_WINDOW_SIZE];
-uint8_t currentAccelIndex = 0;
+uint8_t currentAccelIndex = 100;
 
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
@@ -231,15 +233,15 @@ static void prvReadAccelSensor(void *pvParameters)
                 filteredAccel = movingAccelAverage(accel_avg);
                 float filteredMag = movingAccelAverage(filteredMag);
 
-                if(xSemaphoreTake(xSharedAccelerationThresholdFromGUI, 0) == pdPASS) {
-                    Threshold = Shared_Power_Threshold;
-                    // GIVE ESTOP
-                    xSemaphoreGive(xSharedAccelerationThresholdFromGUI);
-                }
+                // if(xSemaphoreTake(xSharedAccelerationThresholdFromGUI, 0) == pdPASS) {
+                //     AccelThreshold = (float)Shared_Power_Threshold;
+                //     // GIVE ESTOP
+                //     xSemaphoreGive(xSharedAccelerationThresholdFromGUI);
+                // }
 
-                if(filteredMag > Threshold){
-                    xSemaphoreGive(xESTOPSemaphore);
-                }
+                // if(filteredMag > AccelThreshold){
+                //     xSemaphoreGive(xESTOPSemaphore);
+                // }
 
                 // Put data in que structure
                 AccelMsg.CalculatedData = filteredAccel;

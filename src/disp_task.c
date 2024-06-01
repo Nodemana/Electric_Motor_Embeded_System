@@ -178,7 +178,7 @@ bool state_changed = false;
 /* Slider Values*/
 uint32_t Set_Speed;
 uint32_t Power_Threshold = 50;
-uint32_t Acceleration_Threshold;
+float Acceleration_Threshold;
 
 uint32_t Shared_Set_Speed;
 uint32_t Shared_Power_Threshold = 50;
@@ -324,7 +324,7 @@ Canvas(g_sCanvas5, g_psPanels, &g_sCanvas6, 0,
 Canvas(g_sCanvas4, g_psPanels, &g_sCanvas5, 0,
        &g_sKentec320x240x16_SSD2119, 235, 118, 75, 30,
        CANVAS_STYLE_TEXT,
-       ClrMidnightBlue, ClrGray, ClrSilver, &g_sFontCm22, "[C]", 0, 0);
+       ClrMidnightBlue, ClrGray, ClrSilver, &g_sFontCm22, "[G]", 0, 0);
 
 Canvas(g_sCanvas3, g_psPanels, &g_sCanvas4, 0,
        &g_sKentec320x240x16_SSD2119, 235, 155, 75, 30,
@@ -334,7 +334,7 @@ Canvas(g_sCanvas3, g_psPanels, &g_sCanvas4, 0,
 Canvas(g_sCanvas2, g_psPanels, &g_sCanvas3, 0,
        &g_sKentec320x240x16_SSD2119, 5, 27, 310, 20,
        CANVAS_STYLE_FILL | CANVAS_STYLE_OUTLINE | CANVAS_STYLE_TEXT,
-       ClrMidnightBlue, ClrGray, ClrSilver, &g_sFontCm22, "Date: 30/05/2024 Time: XX:XX ", 0, 0);
+       ClrMidnightBlue, ClrGray, ClrSilver, &g_sFontCm22, "Date: 30/05/2024 Time: 17:05 ", 0, 0);
 
 Canvas(g_sCanvas1, g_psPanels, &g_sCanvas2, 0,
        &g_sKentec320x240x16_SSD2119, 5, 50, 310, 135,
@@ -732,8 +732,11 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         //
         // Yes - update the canvas to show the slider value.
         //
-        Acceleration_Threshold = i32Value;
-        usprintf(pcSliderText, "%3d%%", i32Value);
+        Acceleration_Threshold = ((float)i32Value)/50;
+        // usprintf(pcSliderText, "%3d%%", i32Value);
+        char msg[5] = "%f";
+        char output[10];
+        ftoa(msg, pcSliderText, sizeof(msg), Acceleration_Threshold);
         SliderTextSet(&g_psSliders[ACCEL_INDEX], pcSliderText);
         WidgetPaint((tWidget *)&g_psSliders[ACCEL_INDEX]);
     }

@@ -264,7 +264,7 @@ static void prvConfigureTimers(void)
     TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC);
 
     /* Set the Timer 2A load value to run at 80 Hz. */
-    TimerLoadSet(TIMER2_BASE, TIMER_A, g_ui32SysClock / 8);
+    TimerLoadSet(TIMER2_BASE, TIMER_A, g_ui32SysClock / 100);
 
     /* Configure the Timer 2A interrupt for timeout. */
     TimerIntEnable(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
