@@ -64,8 +64,14 @@ extern uint32_t g_ui32SysClock;
 // The binary semaphore used by the timer ISR & task
 extern SemaphoreHandle_t xAccelTimerSemaphore;
 
+// ESTOP
+extern SemaphoreHandle_t xESTOPSemaphore;
 
+// Mutexes
+extern SemaphoreHandle_t xSharedAccelThresholdFromGUI;
 
+// Local threshold
+uint32_t Threshold = 2;
 /* ------------------------------------------------------------------------------------------------
  *                                     Local Global Variables
  * -------------------------------------------------------------------------------------------------
@@ -224,6 +230,16 @@ static void prvReadAccelSensor(void *pvParameters)
                 // Filter result
                 filteredAccel = movingAccelAverage(accel_avg);
                 float filteredMag = movingAccelAverage(filteredMag);
+
+                if(xSemaphoreTake(xSharedAccelerationThresholdFromGUI, 0) == pdPASS) {
+                    Threshold = Shared_Power_Threshold;
+                    // GIVE ESTOP
+                    xSemaphoreGive(xSharedAccelerationThresholdFromGUI);
+                }
+
+                if(filteredMag > Threshold){
+                    xSemaphoreGive(xESTOPSemaphore);
+                }
 
                 // Put data in que structure
                 AccelMsg.CalculatedData = filteredAccel;
