@@ -149,8 +149,8 @@ bool night_flag = true;
 // Axis data
 typedef struct
 {
-    float min;           // Minimun value to plot
-    float max;           // Minimun value to plot
+    float min; // Minimun value to plot
+    float max; // Minimun value to plot
 } DataRange;
 
 DataRange Lux_Data_Range;
@@ -162,8 +162,8 @@ DataRange Speed_Data_Range;
 EventBits_t DisplayBits;
 SensorMsg xReceivedMessage;
 SensorMsg xLuxReceivedMessage;
-CalcMsg   xAccelReceivedMessage;
-CalcMsg   xPowerReceivedMessage;
+CalcMsg xAccelReceivedMessage;
+CalcMsg xPowerReceivedMessage;
 SensorMsg xSpeedReceivedMessage;
 uint8_t current_array_size = 0;
 
@@ -184,6 +184,10 @@ uint32_t Shared_Set_Speed;
 uint32_t Shared_Power_Threshold = 50;
 double Shared_Acceleration_Threshold;
 
+uint32_t clock_counter = 0;
+uint32_t minute = 05;
+bool minute_flag = false;
+
 /* ------------------------------------------------------------------------------------------------
  *                                      Function Declarations
  * -------------------------------------------------------------------------------------------------
@@ -194,10 +198,10 @@ void define_sensor_axis(void);
 
 void update_data_arrays(void);
 // void update_data_arrays(void);
-void clearAxis (int backround_colour );
-void clearScreen (int backround_colour );
+void clearAxis(int backround_colour);
+void clearScreen(int backround_colour);
 
-void plot_data(float * data_arr, DataRange data_range);
+void plot_data(float *data_arr, DataRange data_range);
 /*
  * Called by main() to do example specific hardware configurations and to
  * create the Process Switch task.
@@ -221,7 +225,7 @@ static void prvPlotTask(void *pvParameters);
 /*
  * Function to update the data array
  */
-void update_data_array(float * data_arr, float new_data);
+void update_data_array(float *data_arr, float new_data);
 /*-----------------------------------------------------------*/
 
 /* ------------------------------------------------------------------------------------------------
@@ -753,7 +757,6 @@ void OnSliderChange(tWidget *psWidget, int32_t i32Value)
         SliderTextSet(&g_psSliders[SPEED_INDEX], pcSliderText);
         WidgetPaint((tWidget *)&g_psSliders[SPEED_INDEX]);
     }
-
 }
 
 //*****************************************************************************
@@ -820,7 +823,7 @@ void xyPlaneDraw(DataRange data_range, bool grid_on)
         // Plot each interval of y on y-axis
         GrContextFontSet(&sContext, &g_sFontCm16);
         float y_range = data_range.max - data_range.min;
-        float interval = y_range / (float)(NUMBER_Y_TICKS-1);
+        float interval = y_range / (float)(NUMBER_Y_TICKS - 1);
         if ((int)interval * 2 == 0)
         {
             char cstr[10] = "%f";
@@ -832,8 +835,8 @@ void xyPlaneDraw(DataRange data_range, bool grid_on)
         }
         // usprintf(cstr, "%d", i * interval);
         GrStringDrawCentered(&sContext, output, -1,
-                             X_AXIS_ORIGIN - 20, (Y_AXIS_ORIGIN - 0) - (i * (Y_AXIS_LENGTH-0) / (NUMBER_Y_TICKS-1)), 0); // set -0 to -1.5 to be exact
-        GrLineDrawH(&sContext, X_AXIS_ORIGIN -4, X_AXIS_ORIGIN + 4,  (Y_AXIS_ORIGIN-0) - (i * (Y_AXIS_LENGTH-0) / (NUMBER_Y_TICKS-1)));
+                             X_AXIS_ORIGIN - 20, (Y_AXIS_ORIGIN - 0) - (i * (Y_AXIS_LENGTH - 0) / (NUMBER_Y_TICKS - 1)), 0); // set -0 to -1.5 to be exact
+        GrLineDrawH(&sContext, X_AXIS_ORIGIN - 4, X_AXIS_ORIGIN + 4, (Y_AXIS_ORIGIN - 0) - (i * (Y_AXIS_LENGTH - 0) / (NUMBER_Y_TICKS - 1)));
     }
 }
 void clearAxis(int backround_colour)
@@ -862,7 +865,7 @@ void define_sensor_axis(void)
 {
 }
 
-void update_data_array(float * data_arr, float new_data)
+void update_data_array(float *data_arr, float new_data)
 {
     if (current_array_size <= (NUMBER_DATA_POINTS - 1))
     {
@@ -884,11 +887,11 @@ void update_data_array(float * data_arr, float new_data)
     // UARTprintf("\n");
 }
 
-void plot_data(float * data_arr, DataRange data_range)
+void plot_data(float *data_arr, DataRange data_range)
 {
-    float y_step_size = ( (data_range.max - data_range.min) / Y_AXIS_LENGTH );
+    float y_step_size = ((data_range.max - data_range.min) / Y_AXIS_LENGTH);
     float x_time_step = X_AXIS_LENGTH / NUMBER_DATA_POINTS;
-    float y_data = 0; 
+    float y_data = 0;
     float x_data = 0;
     float prev_x_data = 0;
     float prev_y_data = 0;
@@ -902,7 +905,7 @@ void plot_data(float * data_arr, DataRange data_range)
         for (int i = 0; i < current_array_size; i++)
         {
             x_data = (X_AXIS_ORIGIN + (x_time_step * i) + 10);
-            if (data_arr[i] >= data_range.max) 
+            if (data_arr[i] >= data_range.max)
             {
                 y_data = (Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
@@ -927,13 +930,13 @@ void plot_data(float * data_arr, DataRange data_range)
         for (int i = 0; i < NUMBER_DATA_POINTS; i++)
         {
             x_data = (X_AXIS_ORIGIN + (x_time_step * i) + 10);
-            if (data_arr[i] > data_range.max) 
+            if (data_arr[i] > data_range.max)
             {
                 y_data = (Y_AXIS_ORIGIN - Y_AXIS_LENGTH);
             }
             else
             {
-                y_data = (Y_AXIS_ORIGIN -  (data_arr[i] / y_step_size) - 1.5);
+                y_data = (Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5);
             }
             GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
@@ -1102,7 +1105,7 @@ void update_data_arrays(void)
     }
 
     /*** ACCEL ***/
-    if ( ( ( DisplayBits & (ACCEL_DATA_READY) ) == (ACCEL_DATA_READY) ) )
+    if (((DisplayBits & (ACCEL_DATA_READY)) == (ACCEL_DATA_READY)))
     {
         if (xQueueReceive(xAccelSensorQueue,
                           &(xAccelReceivedMessage),
@@ -1194,7 +1197,8 @@ static void prvPlotTask(void *pvParameters)
     //
 
     selected_sensor = NONE;
-    char cstr[10];
+    char cstr[30];
+    static char pcCanvasText[30];
 
     // Data range structs
     // Lux data ranges
@@ -1213,6 +1217,24 @@ static void prvPlotTask(void *pvParameters)
     {
         if (xSemaphoreTake(xPlotTimerSemaphore, portMAX_DELAY) == pdPASS)
         {
+            if (clock_counter < 120)
+            {
+                clock_counter += 1;
+            }
+            else
+            {
+                minute += 1;
+                minute_flag = true;
+                clock_counter = 0;
+            }
+            if (g_ui32Panel == 0 && minute_flag)
+            {
+                usprintf(pcCanvasText, "Date: 30/05/2024 Time: 17:%02d", minute);
+                CanvasTextSet(&g_sCanvas2, pcCanvasText);
+                WidgetPaint((tWidget *)&g_sCanvas2);
+                minute_flag = false;
+            }
+
             // Update data arrays
             update_data_arrays();
             // Handle the current state
@@ -1228,15 +1250,15 @@ static void prvPlotTask(void *pvParameters)
                 plot_data(lux_data, Lux_Data_Range);
                 break;
 
-                case TEMP:
-                    if (state_changed)
-                    {
-                        clearScreen(ClrWhite);
-                        xyPlaneDraw(Accel_Data_Range, false);
-                        state_changed = false;
-                    }
-                    plot_data(accel_data, Accel_Data_Range);
-                    break;
+            case TEMP:
+                if (state_changed)
+                {
+                    clearScreen(ClrWhite);
+                    xyPlaneDraw(Accel_Data_Range, false);
+                    state_changed = false;
+                }
+                plot_data(accel_data, Accel_Data_Range);
+                break;
 
             case POWER:
                 if (state_changed)
@@ -1279,11 +1301,11 @@ void vPlotSoftwareTimer(void)
 {
     // Create a timer
     TimerHandle_t xPlotTimer = xTimerCreate(
-        "Timer",                // Name of the timer
-        pdMS_TO_TICKS(500),    // Timer period in ticks (1 second here)
-        pdTRUE,                 // Auto-reload
-        (void *)0,              // Timer ID
-        vPlotTimerCallback      // Callback function
+        "Timer",            // Name of the timer
+        pdMS_TO_TICKS(500), // Timer period in ticks (1 second here)
+        pdTRUE,             // Auto-reload
+        (void *)0,          // Timer ID
+        vPlotTimerCallback  // Callback function
     );
 
     // Check if the timer was created successfully
