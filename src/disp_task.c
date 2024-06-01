@@ -87,7 +87,7 @@
 #define X_AXIS_LENGTH 190
 
 #define NUMBER_Y_TICKS 5
-#define NUMBER_DATA_POINTS 30
+#define NUMBER_DATA_POINTS 150
 
 #define DRAW_LUX (0)
 #define DRAW_TEMP (1)
@@ -913,7 +913,7 @@ void plot_data(float *data_arr, DataRange data_range)
             {
                 y_data = (Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5);
             }
-            GrCircleFill(&sContext, x_data, y_data, 2);
+            // GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
             if (i >= 1)
             {
@@ -938,7 +938,7 @@ void plot_data(float *data_arr, DataRange data_range)
             {
                 y_data = (Y_AXIS_ORIGIN - (data_arr[i] / y_step_size) - 1.5);
             }
-            GrCircleFill(&sContext, x_data, y_data, 2);
+            // GrCircleFill(&sContext, x_data, y_data, 2);
             // Draw line connecting data
             if (i >= 1)
             {
@@ -1302,7 +1302,7 @@ void vPlotSoftwareTimer(void)
     // Create a timer
     TimerHandle_t xPlotTimer = xTimerCreate(
         "Timer",            // Name of the timer
-        pdMS_TO_TICKS(500), // Timer period in ticks (1 second here)
+        pdMS_TO_TICKS(100), // Timer period in ticks (1 second here)
         pdTRUE,             // Auto-reload
         (void *)0,          // Timer ID
         vPlotTimerCallback  // Callback function
